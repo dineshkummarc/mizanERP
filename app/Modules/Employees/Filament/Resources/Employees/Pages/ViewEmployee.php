@@ -5,6 +5,7 @@ namespace App\Modules\Employees\Filament\Resources\Employees\Pages;
 use App\Modules\Employees\Filament\Resources\Employees\EmployeeResource;
 use App\Modules\Employees\Filament\Resources\Employees\Schemas\EmployeeInfolist;
 use App\Modules\Employees\Models\Employee;
+use App\Modules\Employees\Services\CustomLetter;
 use App\Modules\Employees\Services\ExperienceLetter;
 use App\Modules\Employees\Services\IncomeCertificate;
 use App\Support\Pdf\Pdf;
@@ -59,8 +60,77 @@ class ViewEmployee extends ViewRecord
 
             $this->experienceLetterAction(),
 
+            $this->customLetterAction(),
+
             EditAction::make(),
         ];
+    }
+
+    /**
+     * Any wording an administrator types, on the company letterhead — the letter the other two don't cover.
+     *
+     * **Administrator only, unlike its siblings.** The certificate and the experience letter print only what
+     * the record backs, so anyone who may view the record may download them. This prints whatever is typed,
+     * and free text on company paper is a statement the company makes — so it is gated on who may speak for
+     * the company, not on who may see the employee.
+     */
+    protected function customLetterAction(): Action
+    {
+        return Action::make('customLetter')
+            ->label('Custom letter')
+            ->icon('heroicon-o-pencil-square')
+            ->color('gray')
+            ->visible(fn (): bool => auth()->user()?->isAdministrator() ?? false)
+            ->modalHeading('Custom letter')
+            ->modalDescription('Your own wording on the company letterhead, with the reference and seal. '
+                .'Rendered fresh each time and never stored — keep your own copy of what you send.')
+            ->modalSubmitActionLabel('Download')
+            ->schema([
+                TextInput::make('to')
+                    ->label('Addressed to')
+                    ->maxLength(160)
+                    ->default(fn (Employee $record): string => $record->fullName())
+                    ->helperText('Printed above the subject. "To whom it may concern" works too; '
+                        .'leave blank to omit the line.'),
+
+                TextInput::make('subject')
+                    ->label('Subject')
+                    ->required()
+                    ->maxLength(160)
+                    ->placeholder('Letter of Appreciation / Warning Letter / No Objection Certificate'),
+
+                Textarea::make('body')
+                    ->label('Body')
+                    ->required()
+                    ->rows(12)
+                    ->maxLength(8000)
+                    ->helperText('Plain text, printed as typed. A blank line starts a new paragraph.'),
+            ])
+            ->action(function (Employee $record, array $data) {
+                $letters = app(CustomLetter::class);
+
+                $missing = $letters->missingFor($record);
+
+                if ($missing !== []) {
+                    Notification::make()
+                        ->danger()
+                        ->title('The letterhead is incomplete')
+                        ->body('Add '.implode('; ', $missing).'.')
+                        ->persistent()
+                        ->send();
+
+                    return null;
+                }
+
+                $pdf = $letters->renderPdf($record, $data);
+
+                // `raw()` for the reason the sibling letters give: `toResponse()->getContent()` is false
+                // under Dompdf, and `echo false` is a 0-byte PDF that looks like a document.
+                return response()->streamDownload(
+                    fn () => print ($pdf->raw()),
+                    $letters->filename($record),
+                );
+            });
     }
 
     /**
