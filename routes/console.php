@@ -12,6 +12,7 @@
 use Illuminate\Support\Facades\Schedule;
 use Spatie\Health\Commands\RunHealthChecksCommand;
 use Spatie\Health\Commands\ScheduleCheckHeartbeatCommand;
+use Spatie\Health\Models\HealthCheckResultHistoryItem;
 
 /**
  * Run every check, every minute.
@@ -20,7 +21,7 @@ use Spatie\Health\Commands\ScheduleCheckHeartbeatCommand;
  * `ScheduleCheck` asks "did cron fire in the last minute", and an unreachable company database
  * discovered an hour late is an hour of a customer seeing errors. The checks are cheap — a PDO
  * connect per company, a Redis ping, a disk stat — and `health:check` writes one history row per
- * check per run, pruned to five days by `keep_history_for_days` in config/health.php.
+ * check per run, pruned to five days by the `model:prune` entry below.
  *
  * Notifications are throttled to one an hour by that same config, so a minute-by-minute check
  * does not become a minute-by-minute mailbox.
@@ -50,6 +51,24 @@ Schedule::command(ScheduleCheckHeartbeatCommand::class)->everyMinute();
  * notification and PDF in the application quietly stops arriving.
  */
 Schedule::command('health:queue-check-heartbeat')->everyMinute();
+
+/*
+ * The prune that `keep_history_for_days` promises.
+ *
+ * config/health.php has said "keep five days" from the start, but that setting is only read by
+ * `model:prune` — which nothing scheduled. A check every minute times ten checks is ~14,000 rows a
+ * day forever: by October 2026 the table held 928,000 rows and 264 MB — 97% of the landlord
+ * database — the nightly dump spent seconds reading two months of "Ok", and single-row inserts into
+ * it hit 4.8s during the backup window. A retention setting with no schedule behind it is a table
+ * that grows forever (the backups below learned the same lesson from the other side).
+ *
+ * At 00:40 so the 01:30 landlord backup dumps the table already pruned. Landlord model, default
+ * connection — unlike the per-tenant prune in app/Modules/Projects/routes/console.php, no
+ * `tenants:artisan` wrapper.
+ */
+Schedule::command('model:prune', ['--model' => HealthCheckResultHistoryItem::class])
+    ->dailyAt('00:40')
+    ->withoutOverlapping();
 
 /*
  * A worker for the database queue, on a host where nothing else supervises one.

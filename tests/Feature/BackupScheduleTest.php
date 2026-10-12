@@ -27,4 +27,19 @@ class BackupScheduleTest extends TestCase
         $this->assertSame('30 1 * * *', $at('backup:run'), 'the landlord and the uploads');
         $this->assertSame('0 2 * * *', $at('backup:tenants'), 'one archive per company, after the landlord it needs');
     }
+
+    /**
+     * The health history prune actually runs — `keep_history_for_days` is only read by `model:prune`,
+     * and for two months nothing scheduled it: 928,000 rows, 97% of the landlord database, dumped
+     * nightly. Before the backup, so the archive holds five days of history rather than forever.
+     */
+    public function test_the_health_history_prune_is_scheduled_before_the_backup(): void
+    {
+        $event = collect(app(Schedule::class)->events())
+            ->first(fn ($event): bool => str_contains($event->command ?? '', 'model:prune')
+                && str_contains($event->command, 'HealthCheckResultHistoryItem'));
+
+        $this->assertNotNull($event, 'nothing prunes the health history');
+        $this->assertSame('40 0 * * *', $event->expression);
+    }
 }
