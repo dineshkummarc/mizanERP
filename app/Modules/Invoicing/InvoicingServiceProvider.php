@@ -2,6 +2,7 @@
 
 namespace App\Modules\Invoicing;
 
+use App\Modules\Accounting\Filament\Resources\BankStatementLines\BankStatementLineResource;
 use App\Modules\Invoicing\Console\Commands\RaiseRecurringInvoices;
 use App\Modules\Invoicing\Console\Commands\SendCustomerStatements;
 use App\Modules\Invoicing\Console\Commands\SendOverdueReminders;
@@ -16,6 +17,7 @@ use App\Modules\Invoicing\Filament\Pages\TaxWithheldByCustomers;
 use App\Modules\Invoicing\Filament\Settings\CreditControlSettingsSection;
 use App\Modules\Invoicing\Filament\Settings\DunningSettingsSection;
 use App\Modules\Invoicing\Filament\Settings\StatementSettingsSection;
+use App\Modules\Invoicing\Filament\Support\RecordReceiptFromStatementLine;
 use App\Modules\Invoicing\Models\Contact;
 use App\Modules\Invoicing\Models\Invoice;
 use App\Modules\Invoicing\Models\InvoiceLine;
@@ -40,6 +42,7 @@ use App\Support\LedgerDimensions;
 use App\Support\ModuleMap;
 use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportRenderers;
+use App\Support\ResourceContributions;
 use App\Support\SettingsSections;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Carbon;
@@ -208,6 +211,14 @@ class InvoicingServiceProvider extends ServiceProvider
         // to edit it. Registered from here rather than named in Accounting: that naming was an
         // `accounting -> invoicing` edge, and Accounting does not require Invoicing.
         JournalEntryOwners::register('an invoice', Invoice::class);
+
+        // "Record receipt" on a bank statement line — docs/bexio-gap-plan.md Phase 3, item 12. The line
+        // is Accounting's and may not name an invoice, so the button is offered from here.
+        ResourceContributions::addRecordAction(
+            BankStatementLineResource::class,
+            'recordReceipt',
+            fn () => RecordReceiptFromStatementLine::make(),
+        );
 
         // Receivables and payables, and what they are supposed to equal — `docs/erpnext-gap-plan.md`
         // Phase 2. Registered at boot so the health check finds the pair whether or not anybody has

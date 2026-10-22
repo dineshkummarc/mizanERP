@@ -2,11 +2,14 @@
 
 namespace App\Modules\Crm;
 
+use App\Modules\Crm\Console\Commands\RemindNextActions;
 use App\Modules\Crm\Filament\Pages\PipelineByStage;
 use App\Modules\Crm\Filament\Pages\RottingDeals;
 use App\Modules\Crm\Filament\Pages\SalesForecast;
 use App\Modules\Crm\Filament\Pages\TargetAttainment;
 use App\Modules\Crm\Filament\Pages\WinLoss;
+use App\Modules\Crm\Filament\RelationManagers\ContactNextActionsRelationManager;
+use App\Modules\Crm\Filament\RelationManagers\ContactTimelineRelationManager;
 use App\Modules\Crm\Filament\Settings\LeadCaptureSettingsSection;
 use App\Modules\Crm\Models\Activity;
 use App\Modules\Crm\Models\Lead;
@@ -29,8 +32,11 @@ use App\Modules\Crm\Policies\PipelinePolicy;
 use App\Modules\Crm\Policies\PipelineStagePolicy;
 use App\Modules\Crm\Policies\SalesTargetPolicy;
 use App\Modules\Crm\Support\CrmReports;
+use App\Modules\Invoicing\Filament\Resources\Contacts\ContactResource;
+use App\Modules\Invoicing\Models\Contact;
 use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportRenderers;
+use App\Support\ResourceContributions;
 use App\Support\SettingsSections;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -70,10 +76,42 @@ class CrmServiceProvider extends ServiceProvider
         // The public lead-capture endpoint. Outside the panel, so the panel's tenancy
         // middleware never runs for it — see ResolveLeadCaptureTenant.
         $this->loadRoutesFrom(__DIR__.'/routes/web.php');
+        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
+
+        // Laravel only auto-discovers commands in app/Console/Commands; a module's has to be named
+        // here or it disappears from artisan and, silently, from the scheduler.
+        $this->commands([RemindNextActions::class]);
 
         // 79: with the other public-endpoint plumbing, directly before the status page
         // (80), which the CompanySettings comment puts last as "the least consequential".
         SettingsSections::register('crm.lead-capture', LeadCaptureSettingsSection::class, 79);
+
+        $this->contributeToContacts();
+    }
+
+    /**
+     * The customer's calls and next actions, on the customer — `docs/bexio-gap-plan.md` Phase 2, item 4.
+     *
+     * Both tables were polymorphic over Contact from the day they were made; only a deal's row ever
+     * wrote to them. The relation and the tab are offered from here because Invoicing may not name
+     * CRM — the guarded direction in ModuleBoundaryTest — which is the shape Projects uses for the
+     * Employee screen (App\Support\ResourceContributions). `timeline`, not `activities`: the Auditable
+     * trait already owns that name, as Opportunity::timeline() records.
+     */
+    private function contributeToContacts(): void
+    {
+        Contact::resolveRelationUsing(
+            'timeline',
+            fn (Contact $contact) => $contact->morphMany(Activity::class, 'subject')->orderByDesc('occurred_at'),
+        );
+
+        Contact::resolveRelationUsing(
+            'nextActions',
+            fn (Contact $contact) => $contact->morphMany(NextAction::class, 'subject'),
+        );
+
+        ResourceContributions::addRelationManager(ContactResource::class, ContactTimelineRelationManager::class);
+        ResourceContributions::addRelationManager(ContactResource::class, ContactNextActionsRelationManager::class);
     }
 
     /**

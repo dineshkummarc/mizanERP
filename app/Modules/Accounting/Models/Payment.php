@@ -5,8 +5,10 @@ namespace App\Modules\Accounting\Models;
 use App\Models\TenantModel as Model;
 use App\Modules\Accounting\Support\BankFileAccount;
 use App\Modules\Employees\Models\Employee;
+use App\Support\Contracts\PayableDocument;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 
 class Payment extends Model
 {
@@ -310,9 +312,8 @@ class Payment extends Model
             return (string) (setting('ipayments')['salary_payment_type'] ?? 'PAY');
         }
 
-        $payeeBankId = $this->payable instanceof Beneficiary
-            ? $this->payable->bank_id
-            : $this->payable?->bank_id;
+        $payee = $this->payee();
+        $payeeBankId = $payee?->bank_id;
 
         $debitBankId = $this->companyBankAccount?->bank_id;
 
@@ -320,11 +321,22 @@ class Payment extends Model
             return 'BT';
         }
 
-        if ($this->payable instanceof Beneficiary && $this->payable->payment_type) {
-            return $this->payable->payment_type;
+        if ($payee instanceof Beneficiary && $payee->payment_type) {
+            return $payee->payment_type;
         }
 
         return 'IBFT';
+    }
+
+    /**
+     * The party the bank file pays: the payable itself, or for a document — a supplier bill — whoever the
+     * document names. See App\Support\Contracts\PayableDocument.
+     */
+    public function payee(): ?EloquentModel
+    {
+        $payable = $this->loadMissing('payable')->payable;
+
+        return $payable instanceof PayableDocument ? $payable->payee() : $payable;
     }
 
     /**
@@ -358,8 +370,9 @@ class Payment extends Model
         //
         // `bank` too, on whichever side the morph landed — both an Employee and a Beneficiary have
         // one, and the account resolution below reads it. Over a list this is already loaded by the
-        // caller's morphWith (see SalaryBankFile) and this line does nothing.
-        $payable = $this->loadMissing('payable')->payable;
+        // caller's morphWith (see SalaryBankFile) and this line does nothing. For a bill the party is
+        // the supplier it names, which the morph cannot preload — one query per bill in a file.
+        $payable = $this->payee();
 
         // `bank` on either side, and `user` on the employee side for the name and email this puts in
         // the file. Guarded by type rather than loaded blindly: a Beneficiary has no user, and asking

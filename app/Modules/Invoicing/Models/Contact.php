@@ -21,6 +21,11 @@ class Contact extends Model
     protected $fillable = [
         'name', 'kind', 'email', 'phone', 'address_line_1', 'address_line_2',
         'ntn', 'cnic', 'bank_id', 'is_active', 'payment_terms_days', 'credit_limit', 'default_tax_rate_id',
+        // The account columns — docs/bexio-gap-plan.md Phase 2, item 5. `owner_employee_id` has no
+        // relation here on purpose: Invoicing may not name Employees, so EmployeeOptions labels it.
+        'category', 'owner_employee_id', 'default_discount_pct',
+        // Where a supplier is paid — Phase 3. Read by the bank file exactly as a beneficiary's are.
+        'account_no', 'iban',
     ];
 
     protected $casts = [
@@ -28,6 +33,7 @@ class Contact extends Model
         'payment_terms_days' => 'integer',
         // Null is no limit — see the migration. `InvoiceService::issue()` is the only reader.
         'credit_limit' => 'decimal:2',
+        'default_discount_pct' => 'decimal:2',
     ];
 
     /**
@@ -122,5 +128,50 @@ class Contact extends Model
     public function isSupplier(): bool
     {
         return in_array($this->kind, [self::KIND_SUPPLIER, self::KIND_BOTH]);
+    }
+
+    /**
+     * A catalogue price with this party's standing discount taken off — Phase 2, item 5.
+     *
+     * The line carries the result, not the negotiation: the same rule a converted quote follows, which
+     * is why there is no discount column on invoice lines and nothing downstream of a line changed.
+     */
+    public function discounted(float $price): float
+    {
+        return round($price * (1 - (float) $this->default_discount_pct / 100), 2);
+    }
+
+    /**
+     * What they owe right now: open sales less open credit notes, signed.
+     *
+     * Negative means the customer is in credit. The Statement action answers the same question for a
+     * period with the movements; this is the one figure for the top of the screen.
+     */
+    public function openBalance(): float
+    {
+        return round($this->invoices()
+            ->whereIn('kind', [Invoice::KIND_SALE, Invoice::KIND_CREDIT_NOTE])
+            ->whereIn('status', [Invoice::STATUS_ISSUED, Invoice::STATUS_PARTIALLY_PAID])
+            ->get()
+            ->sum(fn (Invoice $invoice): float => $invoice->signedOutstanding()), 2);
+    }
+
+    /**
+     * Every category in use, for the datalist and the filter.
+     *
+     * Free text offered back rather than a settings list: the second contact in a category gets it
+     * from the first, and nobody administers anything.
+     *
+     * @return array<int, string>
+     */
+    public static function categories(): array
+    {
+        return static::query()
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category')
+            ->all();
     }
 }

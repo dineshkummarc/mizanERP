@@ -2,9 +2,11 @@
 
 namespace App\Modules\Accounting\Filament\Resources\BankStatementLines\Tables;
 
+use App\Modules\Accounting\Filament\Resources\BankStatementLines\BankStatementLineResource;
 use App\Modules\Accounting\Models\BankStatementLine;
 use App\Modules\Accounting\Models\JournalEntryLine;
 use App\Modules\Accounting\Services\BankReconciliationService;
+use App\Support\ResourceContributions;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -62,6 +64,8 @@ class BankStatementLinesTable
             ])
             ->recordActions([
                 EditAction::make(),
+                // "Record receipt", offered by Invoicing — docs/bexio-gap-plan.md Phase 3. Absent without it.
+                ...ResourceContributions::recordActionsFor(BankStatementLineResource::class),
                 ...self::lineActions(),
             ])
             ->toolbarActions([

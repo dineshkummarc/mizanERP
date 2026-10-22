@@ -78,18 +78,19 @@ class ExpenseClaimsTable
                     ->color('success')
                     ->requiresConfirmation()
                     ->modalDescription(fn (ExpenseClaim $record): string => 'Approving commits to reimbursing '
-                        .number_format((float) $record->amount, 2).' with this employee\'s next payslip.')
+                        .number_format((float) $record->amount, 2).' with this employee\'s next payslip, and books it '
+                        .'now: the expense in its category, and what is owed as a liability until payday.')
                     ->visible(fn (ExpenseClaim $record): bool => auth()->user()?->can('decide', $record) ?? false)
                     ->action(function (ExpenseClaim $record): void {
                         try {
                             $record->approve(auth()->user());
-                        } catch (\InvalidArgumentException $e) {
+                        } catch (\InvalidArgumentException|\RuntimeException $e) {
                             Notification::make()->danger()->title($e->getMessage())->send();
 
                             return;
                         }
 
-                        Notification::make()->success()->title('Approved — it will be reimbursed with the next payslip.')->send();
+                        Notification::make()->success()->title('Approved and booked — it will be reimbursed with the next payslip.')->send();
                     }),
 
                 Action::make('refuse')

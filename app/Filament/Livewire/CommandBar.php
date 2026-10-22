@@ -217,8 +217,9 @@ class CommandBar extends Component
         Notification::make()
             ->success()
             ->title('Booked')
-            // The effect, not the command — the same rule as the confirmation line itself (§2.3).
-            ->body($interpretation->effectLine().' · '.$entry->entry_number)
+            // The effect, not the command — the same rule as the confirmation line itself (§2.3). The
+            // reference is whatever the result numbers itself by: an entry, an invoice, a quote.
+            ->body($interpretation->effectLine().' · '.($entry->entry_number ?? $entry->invoice_number ?? $entry->number ?? ''))
             ->send();
 
         $this->reset('utterance', 'transcript', 'speechLocale', 'preview', 'utteranceId', 'answers');

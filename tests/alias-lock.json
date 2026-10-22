@@ -431,6 +431,7 @@
         "App\\Filament\\Widgets\\ReceivablesPayablesOverview": "App\\Modules\\Invoicing\\Filament\\Widgets\\ReceivablesPayablesOverview"
     },
     "datasets": {
+        "App\\Reporting\\ContactDataset": "App\\Modules\\Invoicing\\Reporting\\ContactDataset",
         "App\\Reporting\\EmployeeDataset": "App\\Modules\\Employees\\Reporting\\EmployeeDataset",
         "App\\Reporting\\InvoiceDataset": "App\\Modules\\Invoicing\\Reporting\\InvoiceDataset",
         "App\\Reporting\\InvoiceLineDataset": "App\\Modules\\Invoicing\\Reporting\\InvoiceLineDataset",

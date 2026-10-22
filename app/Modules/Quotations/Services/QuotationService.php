@@ -4,9 +4,13 @@ namespace App\Modules\Quotations\Services;
 
 use App\Modules\Invoicing\Models\Invoice;
 use App\Modules\Quotations\Models\Quotation;
+use App\Notifications\QuotationIssued;
+use App\Support\Pdf\Pdf;
+use App\Support\Pdf\PdfDocument;
 use App\Support\TenantTransaction;
 // Illuminate's, per the house rule: a method hinting the Laravel subclass rejects an instance of the parent.
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -52,6 +56,55 @@ class QuotationService
         $quotation->update(['status' => Quotation::STATUS_SENT]);
 
         return $quotation;
+    }
+
+    /**
+     * Email the quote, PDF attached, to whoever it is for — `docs/bexio-gap-plan.md` Phase 1, item 2.
+     *
+     * Separate from `send()`, which fixes the figures and is all the tests of the status ladder call. A
+     * quote handed over across a table is still sent; this is the part that needs an address, and it is
+     * refused rather than skipped when there is none, so the screen can say "marked sent, not emailed".
+     *
+     * @return string the address it went to
+     *
+     * @throws InvalidArgumentException for a draft, or a party with no email address
+     */
+    public function deliver(Quotation $quotation): string
+    {
+        if ($quotation->isDraft()) {
+            throw new InvalidArgumentException('Send it first: a draft has no fixed figures to put in front of a customer.');
+        }
+
+        $email = $quotation->correspondenceEmail();
+
+        if (blank($email)) {
+            throw new InvalidArgumentException(
+                'The '.($quotation->contact_id ? 'customer' : 'lead').' has no email address on record.'
+            );
+        }
+
+        Notification::route('mail', $email)->notify(new QuotationIssued($quotation));
+
+        activity('Quotation')
+            ->performedOn($quotation)
+            ->causedBy(auth()->user())
+            ->event('emailed')
+            ->withProperties(['email' => $email])
+            ->log("Quote {$quotation->number} emailed to {$email}");
+
+        return $email;
+    }
+
+    public function renderPdf(Quotation $quotation): PdfDocument
+    {
+        $quotation->loadMissing(['contact', 'lead', 'lines.product', 'supersedes']);
+
+        return Pdf::view('pdfs.quotation', ['quotation' => $quotation])->name($this->pdfFilename($quotation));
+    }
+
+    public function pdfFilename(Quotation $quotation): string
+    {
+        return "{$quotation->number}.pdf";
     }
 
     /**

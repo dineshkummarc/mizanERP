@@ -14,6 +14,7 @@ use App\Modules\Quotations\Models\Quotation;
 use App\Modules\Quotations\Services\QuotationService;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -106,7 +107,30 @@ class QuotationResource extends Resource
                         ->label('Product')
                         ->options(fn (): array => Product::query()->orderBy('name')->pluck('name', 'id')->all())
                         ->searchable()
-                        ->visible(fn (): bool => modules()->enabled('inventory')),
+                        ->visible(fn (): bool => modules()->enabled('inventory'))
+                        ->live()
+                        // The list price lands on the line and the customer's standing discount beside it —
+                        // docs/bexio-gap-plan.md Phase 2. `../../contact_id` is the quote's own field, two
+                        // levels up from a repeater item.
+                        ->afterStateUpdated(function ($state, callable $get, callable $set): void {
+                            $product = $state ? Product::query()->find($state) : null;
+
+                            if ($product === null) {
+                                return;
+                            }
+
+                            if (blank($get('description'))) {
+                                $set('description', $product->name);
+                            }
+
+                            if ($product->list_price !== null) {
+                                $set('unit_price', (float) $product->list_price);
+                            }
+
+                            if ($contact = Contact::query()->find($get('../../contact_id'))) {
+                                $set('discount_pct', (float) $contact->default_discount_pct);
+                            }
+                        }),
 
                     TextInput::make('description')->required()->maxLength(255)->columnSpan(2),
                     TextInput::make('quantity')->numeric()->default(1)->required(),
@@ -115,8 +139,8 @@ class QuotationResource extends Resource
                     TextInput::make('discount_pct')
                         ->label('Discount %')
                         ->numeric()
-                        ->default(0)
-                        ->helperText('The invoice carries the resulting price, not the negotiation.'),
+                        ->default(fn (callable $get): float => (float) (Contact::query()->find($get('../../contact_id'))?->default_discount_pct ?? 0))
+                        ->helperText('Starts at the customer\'s standing discount. The invoice carries the resulting price, not the negotiation.'),
 
                     Select::make('tax_rate_id')
                         ->label('Tax')
@@ -183,24 +207,63 @@ class QuotationResource extends Resource
                 ]),
             ])
             ->recordActions([
+                Action::make('pdf')
+                    ->label('PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('gray')
+                    ->visible(fn (Quotation $record): bool => auth()->user()?->can('view', $record) ?? false)
+                    ->url(
+                        // The company is a path segment: the route is outside the panel and resolves
+                        // its tenant from the URL, like every report download.
+                        fn (Quotation $record): string => route('quotation.pdf', [
+                            'company' => Filament::getTenant()?->slug,
+                            'quotation' => $record->getKey(),
+                        ]),
+                        shouldOpenInNewTab: true,
+                    ),
+
+                /**
+                 * Send — fixes the figures, then emails the PDF — `docs/bexio-gap-plan.md` Phase 1.
+                 *
+                 * The two halves fail separately on purpose. A quote with no lines is refused outright;
+                 * a quote for a party with no email address is still marked sent — the offer stands,
+                 * somebody will hand it over — and the screen says it was not emailed, so nobody
+                 * assumes it was.
+                 */
                 Action::make('send')
                     ->label('Send')
                     ->icon('heroicon-o-paper-airplane')
                     ->color('info')
                     ->requiresConfirmation()
-                    ->modalDescription('Its figures are fixed from here on. Changing it afterwards means a new version, so your copy and the customer\'s never disagree.')
+                    ->modalDescription(fn (Quotation $record): string => 'Its figures are fixed from here on. Changing it afterwards means a new version, so your copy and the customer\'s never disagree. '
+                        .(($email = $record->correspondenceEmail())
+                            ? "The PDF is emailed to {$email}."
+                            : 'There is no email address for this party, so it is marked sent without being emailed — download the PDF and hand it over.'))
                     ->visible(fn (Quotation $record): bool => $record->isDraft()
                         && (auth()->user()?->can('update', $record) ?? false))
                     ->action(function (Quotation $record): void {
+                        $service = app(QuotationService::class);
+
                         try {
-                            app(QuotationService::class)->send($record);
+                            $service->send($record);
                         } catch (InvalidArgumentException $e) {
                             Notification::make()->danger()->title($e->getMessage())->send();
 
                             return;
                         }
 
-                        Notification::make()->success()->title('Sent.')->send();
+                        try {
+                            $email = $service->deliver($record);
+                        } catch (InvalidArgumentException $e) {
+                            Notification::make()->warning()
+                                ->title('Marked as sent, but not emailed.')
+                                ->body($e->getMessage().' Download the PDF and send it yourself.')
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()->success()->title("Sent to {$email}.")->send();
                     }),
 
                 Action::make('accept')

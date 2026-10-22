@@ -2,6 +2,7 @@
 
 namespace App\Modules\Invoicing\Filament\Resources\Invoices\RelationManagers;
 
+use App\Modules\Invoicing\Filament\Support\LinePricing;
 use App\Modules\Invoicing\Models\Invoice;
 use App\Modules\Invoicing\Models\TaxRate;
 use Filament\Actions\BulkActionGroup;
@@ -33,7 +34,15 @@ class LinesRelationManager extends RelationManager
                 ->searchable()
                 ->preload()
                 ->nullable()
-                ->helperText('Optional — link to an inventory product'),
+                ->live()
+                // The list price, less this customer's standing discount, lands on the line — Phase 2.
+                ->afterStateUpdated(fn ($state, callable $get, callable $set, RelationManager $livewire) => LinePricing::applyProduct(
+                    $livewire->getOwnerRecord(),
+                    $state,
+                    $get,
+                    $set,
+                ))
+                ->helperText('Optional. Its list price, less the customer\'s standing discount, fills the unit price.'),
 
             TextInput::make('description')
                 ->required()
@@ -43,21 +52,26 @@ class LinesRelationManager extends RelationManager
                 ->numeric()
                 ->step(0.01)
                 ->required()
-                ->minValue(0.01),
+                ->minValue(0.01)
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn (callable $get, callable $set) => LinePricing::fillTotal($get, $set)),
 
             TextInput::make('unit_price')
                 ->label('Unit Price')
                 ->numeric()
                 ->step(0.01)
                 ->required()
-                ->minValue(0),
+                ->minValue(0)
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn (callable $get, callable $set) => LinePricing::fillTotal($get, $set)),
 
             TextInput::make('line_total')
                 ->label('Line Total')
                 ->numeric()
                 ->step(0.01)
                 ->required()
-                ->minValue(0),
+                ->minValue(0)
+                ->helperText('Quantity × unit price, filled as you type; issuing checks it.'),
 
             Select::make('account_id')
                 ->label('Account Override')

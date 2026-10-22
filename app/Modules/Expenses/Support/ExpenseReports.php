@@ -2,6 +2,7 @@
 
 namespace App\Modules\Expenses\Support;
 
+use App\Modules\Accounting\Support\PayrollAccounts;
 use App\Modules\Expenses\Models\ExpenseClaim;
 use App\Support\Reporting\ReportPeriod;
 use App\Support\Reporting\ReportShapes;
@@ -13,18 +14,18 @@ use Illuminate\Support\Collection;
  * "By status, employee and period; reimbursed through payroll versus pending, where the pending total is an
  * accrued liability."
  *
- * **The liability is the point of the report**, and it is the part that is in no account. A claim that has
- * been *approved* and not yet paid is money the company owes an employee — an accrued liability by any
- * reading — and nothing in this application posts it. It reaches the ledger only when a payslip reimburses
- * it, at which point it is an expense rather than a liability. So between approval and payday the figure
- * exists and appears nowhere, which is exactly the gap this report closes.
+ * **The liability is the point of the report**, and since `docs/bexio-gap-plan.md` Phase 3 it is in an
+ * account. A claim that is *approved* and not yet paid is money the company owes an employee, and approval
+ * now posts it — the claim's own category as the expense, and 2310 Expense Reimbursements Payable for what
+ * is owed (`ExpenseClaimPosting`). The payslip's reimbursement line debits that same account on payday, so
+ * the liability this report totals and the balance on 2310 are the same figure, for every claim approved
+ * since the posting began. Claims approved before it were never accrued and still reach the ledger only
+ * through the payslip, which is why the two can differ by exactly that backlog.
  *
- * **And a claim that has been paid still cannot be tied to an account**, which is worth stating rather than
- * leaving as an apparent omission. Reimbursements post through the payslip to the account
- * `accounting.payroll_accounts.expense_reimbursement` maps — which the shipped mapping points at `5600`,
- * *the same code as `meal_recovery`*. One account holding two unrelated flows cannot be attributed to
- * either, so a comparison against it would prove nothing and imply something. Phase 2.5's asset register
- * reconciles because its accounts are its own; this one does not, because that account is shared.
+ * **The shared account is gone with it.** Reimbursements used to land in `5600`, the same code as
+ * `meal_recovery`, where nothing could be attributed to either flow; the shipped mapping now points
+ * `expense_reimbursement` at 2310, and a company that kept 5600 has its expense in the claim's category
+ * and 5600 washing to nil.
  *
  * A period, not a balance — unlike the other Phase 2 reports. A claim is submitted, decided and paid within
  * weeks, and "what did we reimburse this year" is the question people actually ask of it. The pending total
@@ -114,10 +115,9 @@ class ExpenseReports
     /**
      * What the figures mean, and the two things a reader has to be told.
      *
-     * That the amount owed is in no account, and that the amount reimbursed cannot be checked against one
-     * either. The second is the less obvious and the more important: an absent reconciliation looks like an
-     * oversight unless the reason is given, and the reason here is that the reimbursement account is shared
-     * with meal recovery.
+     * Where the amount owed sits — the account approval accrues it to, which the payslip clears — and that
+     * the balance on that account is this liability only for claims approved since the posting began
+     * (docs/bexio-gap-plan.md Phase 3). Claims approved before it reach the ledger through the payslip alone.
      *
      * @param  array<int, array<int, string>>  $rows
      */
@@ -130,11 +130,11 @@ class ExpenseReports
         return mb_strtoupper(implode(' · ', array_filter([
             count($rows).' people',
             $owed > 0
-                ? number_format($owed, 0).' approved and unpaid — an accrued liability in no account'
+                ? number_format($owed, 0).' approved and unpaid — accrued in '.PayrollAccounts::code('expense_reimbursement').' until reimbursed'
                 : 'nothing approved is unpaid',
             $pending > 0 ? number_format($pending, 0).' still awaiting a decision' : null,
             $refused > 0 ? number_format($refused, 0).' refused' : null,
-            'reimbursements share an account with meal recovery, so they cannot be reconciled to it',
+            'reimbursements clear '.PayrollAccounts::code('expense_reimbursement').' — its balance is this liability, for claims approved since posting began',
         ])));
     }
 

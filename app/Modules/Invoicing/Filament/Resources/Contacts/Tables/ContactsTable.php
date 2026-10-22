@@ -5,6 +5,7 @@ namespace App\Modules\Invoicing\Filament\Resources\Contacts\Tables;
 use App\Filament\Support\CustomFieldsSchema;
 use App\Modules\Invoicing\Models\Contact;
 use App\Modules\Invoicing\Services\CustomerStatement;
+use App\Support\EmployeeOptions;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -12,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class ContactsTable
@@ -41,6 +43,22 @@ class ContactsTable
                     })
                     ->sortable(),
 
+                TextColumn::make('category')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('—')
+                    ->sortable()
+                    ->toggleable(),
+
+                // One small query per row for the name: the column is a plain id, and Invoicing may not
+                // join Employees. Toggleable, so a long list can switch it off.
+                TextColumn::make('owner_employee_id')
+                    ->label('Account manager')
+                    ->formatStateUsing(fn ($state): ?string => EmployeeOptions::labelFor($state))
+                    ->placeholder('—')
+                    ->toggleable()
+                    ->visible(fn (): bool => modules()->enabled('employees')),
+
                 IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean()
@@ -49,6 +67,16 @@ class ContactsTable
                 ...CustomFieldsSchema::tableColumns(Contact::class),
             ])
             ->filters([
+                SelectFilter::make('category')
+                    ->options(fn (): array => array_combine(Contact::categories(), Contact::categories())),
+
+                SelectFilter::make('owner_employee_id')
+                    ->label('Account manager')
+                    ->searchable()
+                    ->getSearchResultsUsing(fn (string $search): array => EmployeeOptions::search($search))
+                    ->getOptionLabelUsing(fn ($value): ?string => EmployeeOptions::labelFor($value))
+                    ->visible(fn (): bool => modules()->enabled('employees')),
+
                 ...CustomFieldsSchema::tableFilters(Contact::class),
             ])
             ->recordActions([

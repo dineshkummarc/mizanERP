@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Closure;
+
 /**
  * Relation managers one module contributes to another module's resource.
  *
@@ -52,9 +54,40 @@ class ResourceContributions
         return self::$relationManagers[$resource] ?? [];
     }
 
+    /**
+     * Row actions one module contributes to another module's table — the same inversion for a button.
+     *
+     * The first is "Record receipt" on a bank statement line (docs/bexio-gap-plan.md Phase 3): the line is
+     * Accounting's, the invoice it settles is Invoicing's, and Accounting may not name an invoice. Keyed by
+     * action name so a provider booting twice in a test contributes one button, not two.
+     *
+     * @var array<class-string, array<string, Closure(): mixed>>
+     */
+    private static array $recordActions = [];
+
+    /**
+     * @param  class-string  $resource  the resource whose table gets the action
+     * @param  string  $name  the action's name, for idempotency
+     * @param  Closure(): mixed  $factory  builds a fresh Action each time the table is configured
+     */
+    public static function addRecordAction(string $resource, string $name, Closure $factory): void
+    {
+        self::$recordActions[$resource][$name] = $factory;
+    }
+
+    /**
+     * @param  class-string  $resource
+     * @return array<int, mixed> freshly built actions
+     */
+    public static function recordActionsFor(string $resource): array
+    {
+        return array_values(array_map(fn (Closure $factory) => $factory(), self::$recordActions[$resource] ?? []));
+    }
+
     /** For tests that need to assert what a resource looks like without contributions. */
     public static function flush(): void
     {
         self::$relationManagers = [];
+        self::$recordActions = [];
     }
 }

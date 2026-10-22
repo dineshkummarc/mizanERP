@@ -3,14 +3,19 @@
 namespace App\Modules\Invoicing\Filament\Resources\Invoices\Tables;
 
 use App\Filament\Support\CustomFieldsSchema;
+use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\CompanyBankAccount;
 use App\Modules\Invoicing\Models\CustomerCredit;
 use App\Modules\Invoicing\Models\Invoice;
+use App\Modules\Invoicing\Services\BillPaymentService;
+use App\Modules\Invoicing\Services\InvoiceDeliveryService;
 use App\Modules\Invoicing\Services\InvoiceService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Select;
@@ -18,9 +23,11 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class InvoicesTable
@@ -169,6 +176,36 @@ class InvoicesTable
                     ->searchable()
                     ->preload()
                     ->visible(fn (): bool => modules()->enabled('projects')),
+
+                // The purchase-side questions — docs/bexio-gap-plan.md Phase 3, item 11: which supplier,
+                // what falls due when, and what was it booked to. Each works on the sales side too.
+                SelectFilter::make('contact_id')
+                    ->label('Customer / supplier')
+                    ->relationship('contact', 'name')
+                    ->searchable()
+                    ->preload(),
+
+                Filter::make('due')
+                    ->label('Due between')
+                    ->schema([
+                        DatePicker::make('due_from')->label('Due from'),
+                        DatePicker::make('due_to')->label('Due to'),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query
+                        ->when($data['due_from'] ?? null, fn (Builder $q, $from) => $q->whereDate('due_date', '>=', $from))
+                        ->when($data['due_to'] ?? null, fn (Builder $q, $to) => $q->whereDate('due_date', '<=', $to))),
+
+                SelectFilter::make('account')
+                    ->label('Posting account')
+                    ->options(fn (): array => Account::query()
+                        ->orderBy('code')
+                        ->get()
+                        ->mapWithKeys(fn (Account $account): array => [$account->getKey() => "{$account->code} {$account->name}"])
+                        ->all())
+                    ->searchable()
+                    ->query(fn (Builder $query, array $data): Builder => $query
+                        ->when($data['value'] ?? null, fn (Builder $q, $id) => $q
+                            ->whereHas('lines', fn (Builder $line) => $line->where('account_id', $id)))),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -233,6 +270,71 @@ class InvoicesTable
                 ->action(fn (array $data, Invoice $record) => self::run(fn (InvoiceService $s) => self::settle($s, $record, $data), 'Payment recorded')),
 
             /**
+             * Pay a supplier bill through the bank file — docs/bexio-gap-plan.md Phase 3, item 11.
+             *
+             * Raises a draft payment the bank file picks up; the bill is settled in the books when that
+             * payment is approved or released, through the invoice's own settlement path. "Record Payment"
+             * above stays for a bill paid some other way and recorded after the fact.
+             */
+            Action::make('payThroughBank')
+                ->label('Pay through the bank')
+                ->icon('heroicon-o-building-library')
+                ->color('gray')
+                ->visible(fn (Invoice $record): bool => (auth()->user()?->can('InvoicePay') ?? false)
+                    && $record->kind === Invoice::KIND_PURCHASE
+                    && $record->isOpen())
+                ->modalHeading(fn (Invoice $record): string => "Pay {$record->invoice_number} through the bank")
+                ->modalDescription('Raises a payment for the next bank file, to the supplier\'s bank details on their '
+                    .'contact record. The bill is settled when the payment is approved or released.')
+                ->modalSubmitActionLabel('Raise the payment')
+                ->schema([
+                    TextInput::make('amount')
+                        ->numeric()
+                        ->step(0.01)
+                        ->minValue(0.01)
+                        ->required()
+                        ->default(fn (Invoice $record): float => app(BillPaymentService::class)->leftToPay($record))
+                        ->helperText('What is left to pay, less any payment already raised and waiting.'),
+
+                    Select::make('company_bank_account_id')
+                        ->label('Pay from')
+                        ->options(fn (): array => CompanyBankAccount::query()
+                            ->where('is_active', true)
+                            ->orderByDesc('is_default')
+                            ->pluck('title', 'id')
+                            ->all())
+                        ->default(fn (): ?int => CompanyBankAccount::query()
+                            ->where('is_active', true)
+                            ->orderByDesc('is_default')
+                            ->value('id'))
+                        ->required(),
+
+                    DatePicker::make('value_date')
+                        ->label('Value date')
+                        ->default(now()->toDateString())
+                        ->required(),
+                ])
+                ->action(function (array $data, Invoice $record): void {
+                    try {
+                        $payment = app(BillPaymentService::class)->raise(
+                            $record,
+                            (float) $data['amount'],
+                            (int) $data['company_bank_account_id'],
+                            $data['value_date'],
+                        );
+                    } catch (\InvalidArgumentException $e) {
+                        Notification::make()->title($e->getMessage())->danger()->send();
+
+                        return;
+                    }
+
+                    Notification::make()
+                        ->title('Payment #'.$payment->getKey().' of '.number_format((float) $payment->amount, 2).' raised for the next bank file.')
+                        ->success()
+                        ->send();
+                }),
+
+            /**
              * Settle an invoice from money this customer already paid — docs/erpnext-gap-plan.md §2.2.
              *
              * Offered only when they are actually holding something, so on most invoices the button is
@@ -284,6 +386,56 @@ class InvoicesTable
                     ),
                     'Credit applied',
                 )),
+
+            Action::make('pdf')
+                ->label('PDF')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('gray')
+                ->visible(fn (Invoice $record): bool => auth()->user()?->can('view', $record) ?? false)
+                ->url(
+                    // The route existed with nothing linking to it. The company is a path segment because
+                    // it is outside the panel and resolves its tenant from the URL, like every report.
+                    fn (Invoice $record): string => route('invoice.pdf', [
+                        'company' => Filament::getTenant()?->slug,
+                        'invoice' => $record->getKey(),
+                    ]),
+                    shouldOpenInNewTab: true,
+                ),
+
+            /**
+             * Email — the document to the customer, PDF attached — `docs/bexio-gap-plan.md` Phase 1.
+             *
+             * Gated on `InvoiceIssue`: putting an invoice in front of a customer is the same authority as
+             * issuing it. Offered on paid invoices too, because "could you send that again?" is the
+             * commonest reason to send one; every send is its own entry on the history.
+             */
+            Action::make('email')
+                ->label('Email')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('info')
+                ->visible(fn (Invoice $record): bool => (auth()->user()?->can('InvoiceIssue') ?? false)
+                    && in_array($record->kind, [Invoice::KIND_SALE, Invoice::KIND_CREDIT_NOTE], true)
+                    && ! $record->isDraft()
+                    && $record->status !== Invoice::STATUS_VOID)
+                ->requiresConfirmation()
+                ->modalHeading(fn (Invoice $record): string => 'Email '
+                    .($record->isCreditNote() ? 'credit note' : 'invoice')." {$record->invoice_number}")
+                ->modalDescription(fn (Invoice $record): string => ($email = $record->contact?->correspondenceEmail())
+                    ? "The PDF goes to {$email}, worded as Settings → Email templates (invoice issued) says. "
+                        .'The send is recorded on the invoice\'s history.'
+                    : 'The customer has no email address on record. Add one to the contact first.')
+                ->modalSubmitActionLabel('Send')
+                ->action(function (Invoice $record): void {
+                    try {
+                        $email = app(InvoiceDeliveryService::class)->send($record);
+                    } catch (\InvalidArgumentException $e) {
+                        Notification::make()->title($e->getMessage())->danger()->send();
+
+                        return;
+                    }
+
+                    Notification::make()->title("Emailed to {$email}.")->success()->send();
+                }),
 
             Action::make('void')
                 ->label('Void')

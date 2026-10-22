@@ -15,7 +15,7 @@ class FakeStructuredModel implements StructuredModel
     /** @var array<int, array<string, mixed>|ModelUnavailable> */
     private array $queue = [];
 
-    /** @var array<int, array{system: string, utterance: string}> */
+    /** @var array<int, array{system: string, utterance: string, media_type?: string, bytes?: int}> */
     public array $calls = [];
 
     public function isConfigured(): bool
@@ -43,6 +43,25 @@ class FakeStructuredModel implements StructuredModel
     {
         $this->calls[] = ['system' => $system, 'utterance' => $utterance];
 
+        return $this->next($utterance);
+    }
+
+    /**
+     * The same queue; the call records what kind of document it was shown and how big.
+     *
+     * @param  array<string, mixed>  $schema
+     * @return array<string, mixed>
+     */
+    public function extractFromDocument(string $system, string $instruction, string $bytes, string $mediaType, array $schema): array
+    {
+        $this->calls[] = ['system' => $system, 'utterance' => $instruction, 'media_type' => $mediaType, 'bytes' => strlen($bytes)];
+
+        return $this->next($instruction);
+    }
+
+    /** @return array<string, mixed> */
+    private function next(string $utterance): array
+    {
         if ($this->queue === []) {
             throw new ModelUnavailable(
                 'FakeStructuredModel had no queued reply for: '.$utterance

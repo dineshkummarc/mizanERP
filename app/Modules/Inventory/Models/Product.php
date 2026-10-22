@@ -18,11 +18,13 @@ class Product extends Model
     public const METHOD_AVERAGE = 'average';
 
     protected $fillable = [
-        'sku', 'name', 'description', 'unit', 'valuation_method', 'reorder_level',
+        'sku', 'name', 'description', 'unit', 'list_price', 'valuation_method', 'reorder_level',
         'inventory_account_id', 'cogs_account_id', 'revenue_account_id', 'is_active',
     ];
 
     protected $casts = [
+        // The selling price a line starts from — docs/bexio-gap-plan.md Phase 2, item 8. Null is "type it".
+        'list_price' => 'decimal:2',
         'reorder_level' => 'decimal:2',
         'is_active' => 'boolean',
     ];

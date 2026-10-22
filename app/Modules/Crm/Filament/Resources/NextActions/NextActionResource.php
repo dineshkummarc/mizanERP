@@ -71,6 +71,25 @@ class NextActionResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
+            ...static::fields(),
+
+            // Carried rather than chosen: an action is created from the deal or lead it is
+            // about, and a free-text pair of morph columns on a form is how somebody ends up
+            // with an action attached to nothing.
+            TextInput::make('subject_type')->hidden()->dehydrated(),
+            TextInput::make('subject_id')->hidden()->dehydrated(),
+        ]);
+    }
+
+    /**
+     * The three fields an action is made of — shared with the customer's Next actions tab
+     * (docs/bexio-gap-plan.md Phase 2), which supplies the subject from the relation instead.
+     *
+     * @return array<int, TextInput|DatePicker|Select>
+     */
+    public static function fields(): array
+    {
+        return [
             TextInput::make('title')->required()->maxLength(255)->placeholder('Call about the pricing'),
 
             DatePicker::make('due_on')->native(false)->default(now())->required()
@@ -86,13 +105,65 @@ class NextActionResource extends Resource
                 ->searchable()
                 ->visible(fn (): bool => modules()->enabled('employees'))
                 ->default(fn (): ?int => Employee::where('user_id', auth()->id())->value('id')),
+        ];
+    }
 
-            // Carried rather than chosen: an action is created from the deal or lead it is
-            // about, and a free-text pair of morph columns on a form is how somebody ends up
-            // with an action attached to nothing.
-            TextInput::make('subject_type')->hidden()->dehydrated(),
-            TextInput::make('subject_id')->hidden()->dehydrated(),
-        ]);
+    /** The due date, coloured by urgency, naming its snooze. Shared with the customer's tab. */
+    public static function dueColumn(): TextColumn
+    {
+        return TextColumn::make('due_on')
+            ->label('Due')
+            ->date('d M Y')
+            ->color(fn (NextAction $record): string => match (true) {
+                ! $record->isOpen() => 'gray',
+                $record->effectiveDueOn()->isPast() => 'danger',
+                $record->effectiveDueOn()->isToday() => 'warning',
+                default => 'gray',
+            })
+            // The snooze is named rather than hidden: how often something has been
+            // pushed is usually the more useful fact than the new date.
+            ->description(fn (NextAction $record): ?string => $record->isSnoozed()
+                ? 'snoozed to '.$record->snoozed_until->format('d M Y')
+                : null)
+            ->sortable();
+    }
+
+    public static function completeAction(): Action
+    {
+        return Action::make('complete')
+            ->label('Done')
+            ->icon('heroicon-o-check')
+            ->color('success')
+            ->visible(fn (NextAction $record): bool => $record->isOpen()
+                && (auth()->user()?->can('update', $record) ?? false))
+            ->action(function (NextAction $record): void {
+                $record->update(['completed_at' => now(), 'completed_by' => auth()->id()]);
+
+                Notification::make()->success()->title('Done. What is the next one?')->send();
+            });
+    }
+
+    public static function snoozeAction(): Action
+    {
+        return Action::make('snooze')
+            ->label('Snooze')
+            ->icon('heroicon-o-clock')
+            ->color('gray')
+            ->visible(fn (NextAction $record): bool => $record->isOpen()
+                && (auth()->user()?->can('update', $record) ?? false))
+            ->schema([
+                DatePicker::make('snoozed_until')
+                    ->label('Until')
+                    ->native(false)
+                    ->default(now()->addWeek())
+                    ->required()
+                    ->helperText('The original due date is kept, so how often this has been pushed stays visible.'),
+            ])
+            ->action(function (NextAction $record, array $data): void {
+                $record->update(['snoozed_until' => $data['snoozed_until']]);
+
+                Notification::make()->success()->title('Snoozed.')->send();
+            });
     }
 
     public static function table(Table $table): Table
@@ -101,21 +172,7 @@ class NextActionResource extends Resource
             ->columns([
                 TextColumn::make('title')->searchable()->wrap(),
 
-                TextColumn::make('due_on')
-                    ->label('Due')
-                    ->date('d M Y')
-                    ->color(fn (NextAction $record): string => match (true) {
-                        ! $record->isOpen() => 'gray',
-                        $record->effectiveDueOn()->isPast() => 'danger',
-                        $record->effectiveDueOn()->isToday() => 'warning',
-                        default => 'gray',
-                    })
-                    // The snooze is named rather than hidden: how often something has been
-                    // pushed is usually the more useful fact than the new date.
-                    ->description(fn (NextAction $record): ?string => $record->isSnoozed()
-                        ? 'snoozed to '.$record->snoozed_until->format('d M Y')
-                        : null)
-                    ->sortable(),
+                static::dueColumn(),
 
                 TextColumn::make('assignee.display_label')->label('Whose')->placeholder('—')->toggleable(),
 
@@ -144,38 +201,8 @@ class NextActionResource extends Resource
                     ->query(fn (Builder $query): Builder => $query->open()),
             ])
             ->recordActions([
-                Action::make('complete')
-                    ->label('Done')
-                    ->icon('heroicon-o-check')
-                    ->color('success')
-                    ->visible(fn (NextAction $record): bool => $record->isOpen()
-                        && (auth()->user()?->can('update', $record) ?? false))
-                    ->action(function (NextAction $record): void {
-                        $record->update(['completed_at' => now(), 'completed_by' => auth()->id()]);
-
-                        Notification::make()->success()->title('Done. What is the next one?')->send();
-                    }),
-
-                Action::make('snooze')
-                    ->label('Snooze')
-                    ->icon('heroicon-o-clock')
-                    ->color('gray')
-                    ->visible(fn (NextAction $record): bool => $record->isOpen()
-                        && (auth()->user()?->can('update', $record) ?? false))
-                    ->schema([
-                        DatePicker::make('snoozed_until')
-                            ->label('Until')
-                            ->native(false)
-                            ->default(now()->addWeek())
-                            ->required()
-                            ->helperText('The original due date is kept, so how often this has been pushed stays visible.'),
-                    ])
-                    ->action(function (NextAction $record, array $data): void {
-                        $record->update(['snoozed_until' => $data['snoozed_until']]);
-
-                        Notification::make()->success()->title('Snoozed.')->send();
-                    }),
-
+                static::completeAction(),
+                static::snoozeAction(),
                 \Filament\Actions\EditAction::make(),
             ]);
     }

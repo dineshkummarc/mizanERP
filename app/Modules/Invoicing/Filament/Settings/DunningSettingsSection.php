@@ -35,7 +35,9 @@ class DunningSettingsSection implements SettingsSection
         return [
             Section::make('Chasing overdue invoices')
                 ->description('Email customers whose invoices are past due. Nothing is sent while this is off, '
-                    .'and each reminder is recorded on the invoice.')
+                    .'and each reminder is recorded on the invoice. The letter hardens with each repeat — '
+                    .'write "invoice overdue 2" and "invoice overdue 3" under Email templates for your own '
+                    .'second and final wording.')
                 ->schema([
                     Toggle::make('invoicing.dunning_enabled')
                         ->label('Send overdue reminders')

@@ -70,6 +70,21 @@ class InvoiceEvent extends Model
      */
     public const DEFERRED = 'deferred';
 
+    /**
+     * The document was emailed to the customer, PDF attached — `docs/bexio-gap-plan.md` Phase 1.
+     *
+     * What `PRINTED` stood in for until the application could send anything. Recorded once per send, with
+     * the address, so a resend is visible as a second entry rather than overwriting the first — "when did
+     * we send this, and where?" is the first question on a late payment, and it is answered here.
+     */
+    public const SENT = 'sent';
+
+    /**
+     * A bank payment was raised for this bill and is waiting in the next file — `docs/bexio-gap-plan.md`
+     * Phase 3. Not yet money moved: `PAYMENT` follows when the payment is approved or released.
+     */
+    public const PAYMENT_RAISED = 'payment_raised';
+
     protected $fillable = ['invoice_id', 'event', 'description', 'amount', 'caused_by'];
 
     protected $casts = ['amount' => 'decimal:2'];
@@ -105,7 +120,7 @@ class InvoiceEvent extends Model
     public function color(): string
     {
         return match ($this->event) {
-            self::ISSUED => 'info',
+            self::ISSUED, self::SENT => 'info',
             self::PAYMENT => 'success',
             self::VOIDED => 'danger',
             self::PRINTED => 'gray',

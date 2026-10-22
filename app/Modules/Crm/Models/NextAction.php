@@ -29,11 +29,11 @@ class NextAction extends Model
     use Auditable;
     use StoresPlainDates;
 
-    protected array $plainDates = ['due_on', 'snoozed_until'];
+    protected array $plainDates = ['due_on', 'snoozed_until', 'reminded_on'];
 
     protected $fillable = [
         'subject_type', 'subject_id', 'title', 'due_on', 'due_at',
-        'assignee_employee_id', 'completed_at', 'completed_by', 'snoozed_until', 'created_by',
+        'assignee_employee_id', 'completed_at', 'completed_by', 'snoozed_until', 'reminded_on', 'created_by',
     ];
 
     protected $casts = [
@@ -41,6 +41,8 @@ class NextAction extends Model
         'due_at' => 'datetime',
         'completed_at' => 'datetime',
         'snoozed_until' => 'date',
+        // The due date the assignee was last told about — NextActionReminders.
+        'reminded_on' => 'date',
     ];
 
     protected static function booted(): void

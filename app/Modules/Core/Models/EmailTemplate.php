@@ -41,9 +41,30 @@ class EmailTemplate extends Model
          * *account*, only for the invoice, because a reminder about one invoice is a reminder somebody can
          * act on and a statement of account is a different document (§4, item 1).
          */
-        'invoice_overdue' => ['contact_name', 'invoice_number', 'amount', 'due_date', 'days_overdue', 'company'],
+        'invoice_overdue' => ['contact_name', 'invoice_number', 'amount', 'due_date', 'days_overdue', 'reminder_level', 'company'],
+        /*
+         * The second and third reminders — docs/bexio-gap-plan.md Phase 1, item 3. The level is how many
+         * times the invoice has already been chased, read off its own history; a company that writes
+         * neither of these sends `invoice_overdue` every time, as it always did, and one that writes only
+         * the third gets the shipped second letter in between.
+         */
+        'invoice_overdue_2' => ['contact_name', 'invoice_number', 'amount', 'due_date', 'days_overdue', 'reminder_level', 'company'],
+        'invoice_overdue_3' => ['contact_name', 'invoice_number', 'amount', 'due_date', 'days_overdue', 'reminder_level', 'company'],
         // The monthly statement of account, PDF attached — docs/erpnext-gap-plan.md §4 item 1.
         'customer_statement' => ['contact_name', 'period', 'balance', 'company'],
+        /*
+         * The documents themselves, PDF attached — docs/bexio-gap-plan.md Phase 1, item 2. One key for
+         * invoices and credit notes both: the placeholders are the same, and a company rewording one will
+         * want the other to match. `due_date` is empty on a credit note.
+         */
+        'invoice_issued' => ['contact_name', 'invoice_number', 'amount', 'due_date', 'company'],
+        'quotation_issued' => ['contact_name', 'quotation_number', 'total', 'valid_until', 'company'],
+        // The morning digest of next actions, to a member — docs/bexio-gap-plan.md Phase 2, item 6. The
+        // list of actions is the notification's own and is not a placeholder: a company rewords the
+        // framing, not the facts.
+        'next_action_due' => ['employee_name', 'count', 'company'],
+        // Access to a company for somebody outside it — Phase 2, item 10.
+        'company_invitation' => ['name', 'company', 'roles', 'inviter'],
     ];
 
     protected $fillable = ['key', 'subject', 'greeting', 'body', 'action_label', 'closing', 'is_active'];

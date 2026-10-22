@@ -26,6 +26,9 @@ class TransactionTypeSeeder extends Seeder
             ['code' => 'cleaning', 'name' => 'Cleaning', 'account_code' => '5860', 'description' => 'Cleaning & janitorial'],
             ['code' => 'petty-cash-replenishment', 'name' => 'Petty Cash Replenishment', 'account_code' => '1150', 'description' => 'Restores the petty cash imprest'],
             ['code' => 'miscellaneous', 'name' => 'Miscellaneous', 'account_code' => '5900', 'description' => 'Everything else'],
+            // A supplier bill paid through the bank file — docs/bexio-gap-plan.md Phase 3. The account is
+            // informational: the bill posts its own settlement against Accounts Payable (BillPaymentService).
+            ['code' => 'supplier-bill', 'name' => 'Supplier bill', 'account_code' => '2400', 'description' => 'Settles a supplier bill through the bank file; the bill itself carries the expense'],
 
             /*
              * Money coming in.

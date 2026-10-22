@@ -4,8 +4,13 @@ namespace App\Support\Ai;
 
 use Anthropic\Client;
 use Anthropic\Core\Exceptions\APIException;
+use Anthropic\Messages\Base64ImageSource;
+use Anthropic\Messages\Base64PDFSource;
+use Anthropic\Messages\DocumentBlockParam;
+use Anthropic\Messages\ImageBlockParam;
 use Anthropic\Messages\JSONOutputFormat;
 use Anthropic\Messages\OutputConfig;
+use Anthropic\Messages\TextBlockParam;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -31,6 +36,39 @@ class Claude implements StructuredModel
      */
     public function extract(string $system, string $utterance, array $schema): array
     {
+        return $this->request($system, $utterance, $schema);
+    }
+
+    /**
+     * A receipt or a PDF beside the instruction — `docs/bexio-gap-plan.md` Phase 4.
+     *
+     * The document is one content block in the user turn, before the text, which is where the API
+     * wants it; the system prompt and the output schema work exactly as for a typed command, so the
+     * reply is the same kind of thing: fields, and nothing a model could act on.
+     *
+     * @param  array<string, mixed>  $schema
+     * @return array<string, mixed>
+     */
+    public function extractFromDocument(string $system, string $instruction, string $bytes, string $mediaType, array $schema): array
+    {
+        $data = base64_encode($bytes);
+
+        $document = $mediaType === 'application/pdf'
+            ? DocumentBlockParam::with(source: Base64PDFSource::with(data: $data))
+            : ImageBlockParam::with(source: Base64ImageSource::with(data: $data, mediaType: $mediaType));
+
+        return $this->request($system, [$document, TextBlockParam::with(text: $instruction)], $schema);
+    }
+
+    /**
+     * One structured-output call, whatever the user turn holds.
+     *
+     * @param  string|array<int, mixed>  $content  the user turn: a sentence, or content blocks
+     * @param  array<string, mixed>  $schema
+     * @return array<string, mixed>
+     */
+    private function request(string $system, string|array $content, array $schema): array
+    {
         if (! $this->isConfigured()) {
             throw new ModelUnavailable(
                 'The command bot is switched off, or has no API key configured. Set ANTHROPIC_API_KEY and '
@@ -41,7 +79,7 @@ class Claude implements StructuredModel
         try {
             $message = $this->client()->messages->create(
                 maxTokens: (int) config('ai.claude.max_tokens'),
-                messages: [['role' => 'user', 'content' => $utterance]],
+                messages: [['role' => 'user', 'content' => $content]],
                 model: (string) config('ai.claude.model'),
                 /*
                  * The cache breakpoint. The system prompt is this tenant's category

@@ -203,6 +203,64 @@ class OverdueRemindersTest extends AccountingTestCase
         $this->assertCount(0, $this->reminders->due(self::TODAY));
     }
 
+    /**
+     * Each repeat is the next letter, read off the invoice's own history — `docs/bexio-gap-plan.md`
+     * Phase 1, item 3. Capped at the final one: there is no fourth letter that is not a solicitor's.
+     */
+    public function test_each_repeat_moves_to_the_next_reminder_level(): void
+    {
+        $this->enableDunning();
+        $invoice = $this->overdueInvoice(45);
+
+        foreach (['2026-09-30', '2026-10-15', '2026-10-30', '2026-11-14'] as $day) {
+            Carbon::setTestNow($day.' 10:00:00');
+            $this->assertCount(1, $this->reminders->send($day), "on {$day}");
+        }
+
+        // After four, the next would still be the final letter.
+        $this->assertSame(3, $this->reminders->levelFor($invoice));
+
+        // What was actually sent each time: 1, 2, 3 — and 3 again, not 4.
+        $sent = [];
+        Notification::assertSentOnDemand(
+            InvoiceOverdue::class,
+            function (InvoiceOverdue $notification) use (&$sent): bool {
+                $sent[] = $notification->level;
+
+                return true;
+            },
+        );
+        $this->assertSame([1, 2, 3, 3], $sent);
+
+        $this->assertStringContainsString(
+            'Overdue reminder 3 emailed to',
+            $invoice->events()->where('event', InvoiceEvent::REMINDED)->latest('id')->firstOrFail()->description,
+        );
+    }
+
+    /** The shipped letters harden by level; a company's own second letter replaces the shipped one. */
+    public function test_the_letter_hardens_by_level_and_a_company_can_replace_each_one(): void
+    {
+        $invoice = $this->overdueInvoice(45);
+
+        $this->assertStringStartsWith('Reminder:', (new InvoiceOverdue($invoice, 45, 1))->toMail($invoice->contact)->subject);
+        $this->assertStringStartsWith('Second reminder:', (new InvoiceOverdue($invoice, 45, 2))->toMail($invoice->contact)->subject);
+        $this->assertStringStartsWith('Final reminder:', (new InvoiceOverdue($invoice, 45, 3))->toMail($invoice->contact)->subject);
+
+        EmailTemplate::create([
+            'key' => 'invoice_overdue_2',
+            'subject' => 'Reminder {reminder_level}: {invoice_number}',
+            'is_active' => true,
+        ]);
+
+        $this->assertSame(
+            'Reminder 2: '.$invoice->invoice_number,
+            (new InvoiceOverdue($invoice, 45, 2))->toMail($invoice->contact)->subject,
+        );
+        // The third letter has no template of its own, so it is the shipped final one — not the second.
+        $this->assertStringStartsWith('Final reminder:', (new InvoiceOverdue($invoice, 45, 3))->toMail($invoice->contact)->subject);
+    }
+
     /** A company's own wording replaces the shipped text, which is the point of the template. */
     public function test_a_company_can_write_its_own_letter(): void
     {

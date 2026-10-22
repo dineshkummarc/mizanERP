@@ -3,17 +3,24 @@
 namespace App\Modules\Accounting\Filament\Resources\BankStatements\Tables;
 
 use App\Modules\Accounting\Models\BankStatement;
+use App\Modules\Accounting\Models\CompanyBankAccount;
 use App\Modules\Accounting\Services\BankReconciliationService;
+use App\Modules\Accounting\Support\StatementCsv;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 
 class BankStatementsTable
 {
@@ -92,25 +99,73 @@ class BankStatementsTable
     protected static function reconciliationActions(): array
     {
         return [
+            /**
+             * The bank's own CSV, uploaded, with its columns named — docs/bexio-gap-plan.md Phase 3,
+             * item 12. The mapping is saved on the bank account chosen, so the next statement from that
+             * bank is upload-and-done; picking the account fills the mapping back in.
+             */
             Action::make('importLines')
-                ->label('Import Lines (CSV)')
+                ->label('Import statement (CSV)')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->visible(fn (BankStatement $record): bool => auth()->user()?->can('import', $record) ?? false)
+                ->modalDescription('Upload the CSV the bank gives you and say which of its columns hold what. Each '
+                    .'line becomes a statement line, money in positive and money out negative.')
+                ->modalSubmitActionLabel('Import')
                 ->schema([
-                    Textarea::make('csv')
-                        ->label('CSV')
+                    FileUpload::make('file')
+                        ->label('CSV file')
+                        ->acceptedFileTypes(['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'])
+                        ->maxSize(4096)
+                        ->disk('public')
+                        ->directory('statement-imports')
+                        ->required(),
+
+                    Select::make('company_bank_account_id')
+                        ->label('Bank account')
+                        ->options(fn (): array => CompanyBankAccount::query()->where('is_active', true)->pluck('title', 'id')->all())
                         ->required()
-                        ->helperText('One row per line: transaction_date,description,reference,amount (amount signed; negative for money out).'),
+                        ->live()
+                        ->afterStateUpdated(function ($state, callable $set): void {
+                            $mapping = CompanyBankAccount::query()->find($state)?->statement_mapping ?? [];
+
+                            foreach (StatementCsv::FIELDS as $field) {
+                                $set("mapping.{$field}", $mapping[$field] ?? null);
+                            }
+                        })
+                        ->helperText('Whose export this is. Its saved column mapping fills in below; what you import with is saved back.'),
+
+                    Fieldset::make('Columns, by their header in the file')
+                        ->schema([
+                            TextInput::make('mapping.date')->label('Date')->required()->placeholder('Txn Date'),
+                            TextInput::make('mapping.date_format')->label('Date format')->placeholder('d/m/Y')
+                                ->helperText('Only if the dates are not recognised on their own.'),
+                            TextInput::make('mapping.description')->label('Narration')->placeholder('Particulars'),
+                            TextInput::make('mapping.reference')->label('Reference')->placeholder('Ref No'),
+                            TextInput::make('mapping.amount')->label('Signed amount')->placeholder('Amount')
+                                ->helperText('One column, negative for money out — or leave this and use the two below.'),
+                            TextInput::make('mapping.credit')->label('Money in (credit)')->placeholder('Credit'),
+                            TextInput::make('mapping.debit')->label('Money out (debit)')->placeholder('Debit'),
+                        ])
+                        ->columns(2),
                 ])
                 ->action(fn (array $data, BankStatement $record) => self::run(function (BankReconciliationService $s) use ($data, $record) {
-                    $rows = self::parseCsv($data['csv']);
+                    $path = is_array($data['file']) ? reset($data['file']) : $data['file'];
+                    $csv = Storage::disk('public')->get($path);
+                    $mapping = array_filter(array_map('trim', $data['mapping'] ?? []), fn (string $v): bool => $v !== '');
+
+                    $rows = StatementCsv::rows((string) $csv, $mapping);
+
                     if ($rows === []) {
-                        throw new \InvalidArgumentException('No valid rows found.');
+                        throw new \InvalidArgumentException('Nothing below the header row.');
                     }
+
                     $s->import($rows, $record);
 
-                    return count($rows).' line(s) imported.';
-                }, 'Import Lines')),
+                    CompanyBankAccount::query()->find($data['company_bank_account_id'])?->update(['statement_mapping' => $mapping]);
+                    Storage::disk('public')->delete($path);
+
+                    return count($rows).' line(s) imported; the column mapping is saved on the bank account.';
+                }, 'Import')),
 
             Action::make('autoMatch')
                 ->label('Auto-Match')

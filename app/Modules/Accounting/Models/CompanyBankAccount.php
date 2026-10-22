@@ -11,13 +11,15 @@ class CompanyBankAccount extends Model
     use Auditable;
 
     protected $fillable = [
-        'title', 'bank_id', 'account_no', 'iban',
+        'title', 'bank_id', 'account_no', 'iban', 'statement_mapping',
         'transaction_type_id', 'is_default', 'is_active',
     ];
 
     protected $casts = [
         'is_default' => 'boolean',
         'is_active' => 'boolean',
+        // How this bank's statement CSV is laid out — see StatementCsv::FIELDS.
+        'statement_mapping' => 'array',
     ];
 
     protected static function booted()

@@ -44,6 +44,16 @@ class OverdueReminderService
     /** Days before the same invoice is chased again. */
     public const DEFAULT_REPEAT_DAYS = 14;
 
+    /**
+     * How far the letter hardens — `docs/bexio-gap-plan.md` Phase 1, item 3.
+     *
+     * The level is the number of reminders already on the invoice's history plus one, capped here: a fourth
+     * and fifth reminder are the final one again, because there is no fourth letter to write that is not a
+     * solicitor's. No column — the same event log that already answers "when did we last chase this?"
+     * answers "how many times?".
+     */
+    public const MAX_LEVEL = 3;
+
     public function enabled(): bool
     {
         return (bool) setting('invoicing.dunning_enabled', false);
@@ -68,7 +78,7 @@ class OverdueReminderService
      * negative, and there is nobody to chase for one. Only invoices with something actually left to pay,
      * because a part payment reduces the balance without changing the status.
      *
-     * @return Collection<int, array{invoice: Invoice, days: int}>
+     * @return Collection<int, array{invoice: Invoice, days: int, level: int}>
      */
     public function due(?string $asOf = null): Collection
     {
@@ -91,6 +101,7 @@ class OverdueReminderService
             ->filter(fn (array $row): bool => $row['invoice']->outstanding() > 0.004)
             ->filter(fn (array $row): bool => $this->isQuietEnough($row['invoice'], $today))
             ->filter(fn (array $row): bool => filled($row['invoice']->contact?->correspondenceEmail()))
+            ->map(fn (array $row): array => $row + ['level' => $this->levelFor($row['invoice'])])
             ->sortByDesc('days')
             ->values();
     }
@@ -114,17 +125,23 @@ class OverdueReminderService
             $invoice = $row['invoice'];
             $email = $invoice->contact->correspondenceEmail();
 
-            Notification::route('mail', $email)->notify(new InvoiceOverdue($invoice, $row['days']));
+            Notification::route('mail', $email)->notify(new InvoiceOverdue($invoice, $row['days'], $row['level']));
 
             InvoiceEvent::record(
                 $invoice,
                 InvoiceEvent::REMINDED,
-                "Overdue reminder emailed to {$email} — {$row['days']} days past due",
+                "Overdue reminder {$row['level']} emailed to {$email} — {$row['days']} days past due",
                 $invoice->outstanding(),
             );
 
             return $invoice;
         });
+    }
+
+    /** Which letter this invoice gets next: one more than it has had, up to the last one. */
+    public function levelFor(Invoice $invoice): int
+    {
+        return min(self::MAX_LEVEL, $invoice->events()->where('event', InvoiceEvent::REMINDED)->count() + 1);
     }
 
     /**

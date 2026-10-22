@@ -5,6 +5,7 @@ namespace App\Modules\Invoicing\Filament\Resources\Contacts\Schemas;
 use App\Filament\Support\CustomFieldsSchema;
 use App\Modules\Invoicing\Models\Contact;
 use App\Modules\Invoicing\Models\TaxRate;
+use App\Support\EmployeeOptions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -28,6 +29,33 @@ class ContactForm
                         'both' => 'Both',
                     ])
                     ->required(),
+
+                // The account columns — docs/bexio-gap-plan.md Phase 2, item 5.
+                TextInput::make('category')
+                    ->label('Category')
+                    ->maxLength(100)
+                    ->datalist(fn (): array => Contact::categories())
+                    ->nullable()
+                    ->helperText('Industry, region, tier — whatever you group customers by. What has been typed before is offered as you type.'),
+
+                // A plain column with the shared picker: Invoicing may not name Employees, so there is
+                // no relation to hang a relationship() select on. Same shape as construction_workers.
+                Select::make('owner_employee_id')
+                    ->label('Account manager')
+                    ->searchable()
+                    ->getSearchResultsUsing(fn (string $search): array => EmployeeOptions::search($search))
+                    ->getOptionLabelUsing(fn ($value): ?string => EmployeeOptions::labelFor($value))
+                    ->nullable()
+                    ->visible(fn (): bool => modules()->enabled('employees'))
+                    ->helperText('Who looks after this account.'),
+
+                TextInput::make('default_discount_pct')
+                    ->label('Standing discount %')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->default(0)
+                    ->helperText('Taken off a product\'s list price when it lands on their quote or invoice line. The line carries the resulting price.'),
 
                 TextInput::make('email')
                     ->label('Email')
@@ -96,6 +124,20 @@ class ContactForm
                     ->preload()
                     ->nullable()
                     ->helperText('For paying suppliers through the bank payment flow'),
+
+                // The other half of paying a supplier — docs/bexio-gap-plan.md Phase 3. An IBAN is what
+                // goes to another bank; the account number is needed when they bank with us.
+                TextInput::make('iban')
+                    ->label('IBAN')
+                    ->maxLength(34)
+                    ->nullable()
+                    ->helperText('For "Pay through the bank" on their bills.'),
+
+                TextInput::make('account_no')
+                    ->label('Account number')
+                    ->maxLength(50)
+                    ->nullable()
+                    ->helperText('Needed instead of the IBAN when they bank with the same bank the payment leaves from.'),
 
                 Toggle::make('is_active')
                     ->label('Active'),

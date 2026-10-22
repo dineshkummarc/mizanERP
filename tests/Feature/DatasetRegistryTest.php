@@ -370,11 +370,13 @@ class DatasetRegistryTest extends AccountingTestCase
     }
 
     /**
-     * The two subjects with no period say so, and it is not an oversight.
+     * The subjects with no period say so, and it is not an oversight.
      *
-     * Item 5 offers "a mandatory period filter **or** an explicit row cap", and these two take the second
-     * branch for reasons in their own docblocks: an employee is a state rather than an event, and a payslip's
-     * month is a *name*. Asserted so that a future dataset cannot quietly join them without a reason.
+     * Item 5 offers "a mandatory period filter **or** an explicit row cap", and these take the second
+     * branch for reasons in their own docblocks: an employee is a state rather than an event, a payslip's
+     * month is a *name*, and a contact is a party — a date range would hide every customer who did nothing
+     * this month, which is the list somebody exporting contacts wants (docs/bexio-gap-plan.md Phase 2).
+     * Asserted so that a future dataset cannot quietly join them without a reason.
      */
     public function test_only_the_subjects_without_dates_have_no_period(): void
     {
@@ -385,7 +387,7 @@ class DatasetRegistryTest extends AccountingTestCase
 
         sort($without);
 
-        $this->assertSame(['EmployeeDataset', 'PayslipComponentDataset', 'PayslipDataset'], $without);
+        $this->assertSame(['ContactDataset', 'EmployeeDataset', 'PayslipComponentDataset', 'PayslipDataset'], $without);
     }
 
     // ─────────────────────────────── the query is the model's ──

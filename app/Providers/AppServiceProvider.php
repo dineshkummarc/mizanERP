@@ -16,6 +16,8 @@ use App\Modules\Accounting\Services\CommandInterpreter;
 use App\Modules\Accounting\Support\LocalPatternModel;
 use App\Modules\Accounting\Support\RegisterCommandResolver;
 use App\Modules\Expenses\Support\ExpenseClaimCommandResolver;
+use App\Modules\Invoicing\Support\InvoiceCommandResolver;
+use App\Modules\Quotations\Support\QuotationCommandResolver;
 use App\Multitenancy\RefuseTenantlessTenantAwareJobs;
 use App\Support\Ai\Claude;
 use App\Support\Ai\StructuredModel;
@@ -100,6 +102,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CommandInterpreter::class, fn ($app) => new CommandInterpreter(
             $app->make(StructuredModel::class),
             [
+                // Quote before invoice: both claim a verb, and "quote" must never read as an invoice —
+                // docs/bexio-gap-plan.md Phase 4, item 15.
+                $app->make(QuotationCommandResolver::class),
+                $app->make(InvoiceCommandResolver::class),
                 $app->make(ExpenseClaimCommandResolver::class),
                 $app->make(RegisterCommandResolver::class),
             ],

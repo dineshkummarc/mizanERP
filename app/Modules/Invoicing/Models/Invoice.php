@@ -8,18 +8,40 @@ use App\Modules\Accounting\Models\Currency;
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Core\Models\FiscalYear;
 use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\Invoicing\Services\BillPaymentService;
 use App\Modules\Projects\Models\Project;
+use App\Support\Contracts\PayableDocument;
 use App\Support\ModuleMap;
 use App\Traits\Auditable;
 use chillerlan\QRCode\Output\QROutputInterface;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Support\Carbon;
 use Throwable;
 
-class Invoice extends Model
+class Invoice extends Model implements PayableDocument
 {
     use Auditable, HasCustomFields;
+
+    // ─── PayableDocument — a bill paid through the bank file, docs/bexio-gap-plan.md Phase 3 ───
+
+    /** The supplier on the bill, whose bank details go into the file. */
+    public function payee(): ?EloquentModel
+    {
+        return $this->contact;
+    }
+
+    public function paymentLabel(): string
+    {
+        return ($this->kind === self::KIND_PURCHASE ? 'Bill ' : 'Invoice ').$this->invoice_number;
+    }
+
+    /** Approving the payment settles the bill through its own path; see BillPaymentService::settle(). */
+    public function settleByPayment(EloquentModel $payment): ?EloquentModel
+    {
+        return app(BillPaymentService::class)->settle($this, $payment);
+    }
 
     public const KIND_SALE = 'sale';
 
@@ -89,7 +111,7 @@ class Invoice extends Model
         'invoice_number', 'kind', 'credits_invoice_id', 'credit_reason',
         'commissioner_approval_ref', 'commissioner_approved_on',
         'currency_code', 'exchange_rate', 'contact_id', 'project_id', 'invoice_date', 'due_date',
-        'status', 'subtotal', 'tax_amount', 'tax_inclusive', 'total', 'amount_paid', 'memo',
+        'status', 'subtotal', 'tax_amount', 'tax_inclusive', 'total', 'amount_paid', 'memo', 'attachment_path',
         'journal_entry_id', 'fiscal_year_id',
         'fbr_status', 'fbr_irn', 'fbr_usin', 'fbr_reported_at', 'fbr_qr_payload',
     ];

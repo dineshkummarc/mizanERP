@@ -7,7 +7,7 @@ use App\Filament\Concerns\ScopesToAccessibleEmployees;
 use App\Modules\Crm\Filament\Resources\Opportunities\Pages\CreateOpportunity;
 use App\Modules\Crm\Filament\Resources\Opportunities\Pages\EditOpportunity;
 use App\Modules\Crm\Filament\Resources\Opportunities\Pages\ListOpportunities;
-use App\Modules\Crm\Models\Activity;
+use App\Modules\Crm\Filament\Support\ActivityLogFields;
 use App\Modules\Crm\Models\Lead;
 use App\Modules\Crm\Models\LostReason;
 use App\Modules\Crm\Models\Opportunity;
@@ -281,16 +281,8 @@ class OpportunityResource extends Resource
                     ->icon('heroicon-o-phone')
                     ->color('gray')
                     ->visible(fn (Opportunity $record): bool => auth()->user()?->can('update', $record) ?? false)
-                    ->schema([
-                        Select::make('kind')
-                            ->options(array_combine(Activity::KINDS, array_map('ucfirst', Activity::KINDS)))
-                            ->default(Activity::KIND_CALL)
-                            ->required(),
-                        TextInput::make('outcome')->maxLength(255)->placeholder('Send pricing')
-                            ->helperText('What came of it. This is what makes an activity more than a comment.'),
-                        TextInput::make('duration_minutes')->label('Minutes')->numeric(),
-                        Textarea::make('body')->rows(2),
-                    ])
+                    // The same four fields the customer's timeline tab uses — docs/bexio-gap-plan.md Phase 2.
+                    ->schema(ActivityLogFields::make())
                     ->action(function (Opportunity $record, array $data): void {
                         $record->timeline()->create($data + ['occurred_at' => now()]);
 

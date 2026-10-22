@@ -3,13 +3,16 @@
 namespace App\Modules\Expenses\Models;
 
 use App\Models\TenantModel as Model;
+use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Models\Payment;
 use App\Modules\Accounting\Models\TransactionType;
 use App\Modules\Core\Models\User;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Expenses\Notifications\ExpenseClaimDecided;
 use App\Modules\Expenses\Notifications\ExpenseClaimSubmitted;
+use App\Modules\Expenses\Services\ExpenseClaimPosting;
 use App\Modules\Payroll\Models\Payslip;
+use App\Support\TenantTransaction;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,7 +46,7 @@ class ExpenseClaim extends Model
     protected $fillable = [
         'employee_id', 'transaction_type_id', 'claimed_on', 'description', 'amount',
         'notes', 'receipt_path', 'status', 'submitted_by', 'decided_by', 'decided_at',
-        'refusal_reason', 'payslip_id', 'payment_id',
+        'refusal_reason', 'payslip_id', 'payment_id', 'journal_entry_id',
     ];
 
     protected $casts = [
@@ -58,6 +61,12 @@ class ExpenseClaim extends Model
 
     protected static function booted(): void
     {
+        // The accrual goes with the claim — docs/bexio-gap-plan.md Phase 3, item 13. Reversed rather than
+        // deleted, so the ledger says the liability existed and was taken back.
+        static::deleting(function (self $claim): void {
+            app(ExpenseClaimPosting::class)->reverse($claim);
+        });
+
         static::created(function (self $claim): void {
             // Never to the person who submitted it, even if they hold the permission:
             // the point of an approver is that it is somebody else.
@@ -121,21 +130,37 @@ class ExpenseClaim extends Model
         return $this->status === self::STATUS_SETTLED;
     }
 
+    /**
+     * Approve, and book what is now owed — docs/bexio-gap-plan.md Phase 3, item 13.
+     *
+     * One transaction over the status and the accrual: a claim approved whose posting then failed would
+     * be a liability the report shows and the ledger does not, which is the hole this closes.
+     */
     public function approve(User $approver): self
     {
         $this->assertPending('approved');
         $this->assertNotOwnClaim($approver);
 
-        $this->update([
-            'status' => self::STATUS_APPROVED,
-            'decided_by' => $approver->getKey(),
-            'decided_at' => now(),
-            'refusal_reason' => null,
-        ]);
+        TenantTransaction::run(function () use ($approver): void {
+            $this->update([
+                'status' => self::STATUS_APPROVED,
+                'decided_by' => $approver->getKey(),
+                'decided_at' => now(),
+                'refusal_reason' => null,
+            ]);
+
+            app(ExpenseClaimPosting::class)->accrue($this);
+        });
 
         $this->notifySubmitter();
 
         return $this;
+    }
+
+    /** The accrual approval booked, where Accounting is licensed — ExpenseClaimPosting. */
+    public function journalEntry(): BelongsTo
+    {
+        return $this->belongsTo(JournalEntry::class);
     }
 
     /**

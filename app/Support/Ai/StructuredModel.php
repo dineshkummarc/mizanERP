@@ -29,6 +29,23 @@ interface StructuredModel
      */
     public function extract(string $system, string $utterance, array $schema): array;
 
+    /**
+     * The same capability over a document — a photographed receipt, a supplier's PDF —
+     * `docs/bexio-gap-plan.md` Phase 4. Fields out, and still nothing else: the model reads pixels
+     * into values and a person confirms the draft they become.
+     *
+     * `$instruction` is the user turn's text beside the document and is the volatile part;
+     * `$system` is cacheable exactly as for {@see extract()}.
+     *
+     * @param  string  $bytes  the file itself, unencoded
+     * @param  string  $mediaType  image/jpeg, image/png, image/webp, image/gif or application/pdf
+     * @param  array<string, mixed>  $schema
+     * @return array<string, mixed>
+     *
+     * @throws ModelUnavailable when the driver cannot read documents, or could not be reached
+     */
+    public function extractFromDocument(string $system, string $instruction, string $bytes, string $mediaType, array $schema): array;
+
     /** Whether a call would even be attempted — no key, no bot. */
     public function isConfigured(): bool;
 }

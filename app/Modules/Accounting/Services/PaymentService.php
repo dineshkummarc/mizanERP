@@ -6,6 +6,7 @@ use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Models\Payment;
 use App\Modules\Accounting\Support\PayrollAccounts;
+use App\Support\Contracts\PayableDocument;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use RuntimeException;
@@ -58,6 +59,22 @@ class PaymentService
         // the whole batch that row happens to be in.
         if (round((float) $payment->amount, 2) <= 0) {
             return null;
+        }
+
+        /*
+         * A document that settles itself — a supplier bill, `docs/bexio-gap-plan.md` Phase 3.
+         *
+         * The bill already expensed what it bought and credited Accounts Payable when it was issued, so
+         * the debit-and-credit below would book the cost twice. The document posts its own settlement
+         * through the path that knows its currency, its status and its history, and hands the entry back.
+         * Accounting asks the contract rather than naming the module; see PayableDocument.
+         */
+        $payable = $payment->loadMissing('payable')->payable;
+
+        if ($payable instanceof PayableDocument) {
+            $entry = $payable->settleByPayment($payment);
+
+            return $entry instanceof JournalEntry ? $entry : null;
         }
 
         $type = $payment->transactionType;

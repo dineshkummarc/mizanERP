@@ -608,11 +608,13 @@ class AiCommandBotTest extends AccountingTestCase
         $this->assertStringNotContainsString('Who is claiming', $system);
         $this->assertStringNotContainsString('employee', mb_strtolower($system));
 
-        $this->assertSame(
-            ['cash'],
-            array_map(fn ($r) => $r->key(), app(CommandInterpreter::class)->available()),
-            'only the licensed resolver may be offered',
-        );
+        // The licensed resolvers are offered and the unlicensed one is not. Named by absence rather than
+        // as an exact list, because the list grows with the modules (quotes and invoices joined it in
+        // docs/bexio-gap-plan.md Phase 4) and that is not what this test is about.
+        $offered = array_map(fn ($r) => $r->key(), app(CommandInterpreter::class)->available());
+
+        $this->assertNotContains('expense-claim', $offered, 'an unlicensed module is not offered');
+        $this->assertContains('cash', $offered);
     }
 
     /** With the module off, a claim-worded command falls back to cash rather than failing. */

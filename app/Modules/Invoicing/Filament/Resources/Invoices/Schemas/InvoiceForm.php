@@ -8,6 +8,7 @@ use App\Modules\Invoicing\Models\Contact;
 use App\Modules\Invoicing\Models\Invoice;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -172,6 +173,21 @@ class InvoiceForm
 
                 Textarea::make('memo')
                     ->nullable(),
+
+                // The supplier's own PDF on a bill, the signed copy on a sale — docs/bexio-gap-plan.md
+                // Phase 2, item 9. Same disk and limits as a petty-cash receipt; changeable after issue,
+                // because the supplier's document often arrives after the bill was keyed from it.
+                FileUpload::make('attachment_path')
+                    ->label('Attachment')
+                    ->helperText('The document this invoice was raised from or sent as. Image or PDF, up to 5 MB.')
+                    ->disk('public')
+                    ->directory('invoice-attachments')
+                    ->visibility('public')
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'])
+                    ->maxSize(5120)
+                    ->openable()
+                    ->downloadable()
+                    ->columnSpanFull(),
 
                 ...CustomFieldsSchema::form(Invoice::class),
             ]);

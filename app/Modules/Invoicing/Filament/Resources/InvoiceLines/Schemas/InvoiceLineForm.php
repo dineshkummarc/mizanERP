@@ -2,6 +2,8 @@
 
 namespace App\Modules\Invoicing\Filament\Resources\InvoiceLines\Schemas;
 
+use App\Modules\Invoicing\Filament\Support\LinePricing;
+use App\Modules\Invoicing\Models\Invoice;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -26,7 +28,14 @@ class InvoiceLineForm
                     ->searchable()
                     ->preload()
                     ->nullable()
-                    ->helperText('Leave empty for service / non-product lines'),
+                    ->live()
+                    ->afterStateUpdated(fn ($state, callable $get, callable $set) => LinePricing::applyProduct(
+                        Invoice::query()->find($get('invoice_id')),
+                        $state,
+                        $get,
+                        $set,
+                    ))
+                    ->helperText('Leave empty for service / non-product lines. A product\'s list price, less the customer\'s standing discount, fills the unit price.'),
 
                 TextInput::make('description')
                     ->required()
@@ -36,14 +45,18 @@ class InvoiceLineForm
                     ->numeric()
                     ->step(0.01)
                     ->required()
-                    ->minValue(0.01),
+                    ->minValue(0.01)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (callable $get, callable $set) => LinePricing::fillTotal($get, $set)),
 
                 TextInput::make('unit_price')
                     ->label('Unit Price')
                     ->numeric()
                     ->step(0.01)
                     ->required()
-                    ->minValue(0),
+                    ->minValue(0)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (callable $get, callable $set) => LinePricing::fillTotal($get, $set)),
 
                 TextInput::make('line_total')
                     ->label('Line Total')

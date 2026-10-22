@@ -56,6 +56,8 @@ return [
     'datasets' => [
         'App\\Reporting\\InvoiceDataset' => \App\Modules\Invoicing\Reporting\InvoiceDataset::class,
         'App\\Reporting\\InvoiceLineDataset' => \App\Modules\Invoicing\Reporting\InvoiceLineDataset::class,
+        // Contacts as a dataset is the whole of "export to Excel" — docs/bexio-gap-plan.md Phase 2, item 7.
+        'App\\Reporting\\ContactDataset' => \App\Modules\Invoicing\Reporting\ContactDataset::class,
     ],
 
     'permission_groups' => [

@@ -2,8 +2,11 @@
 
 namespace App\Modules\Quotations;
 
+use App\Modules\Invoicing\Filament\Resources\Contacts\ContactResource;
+use App\Modules\Invoicing\Models\Contact;
 use App\Modules\Quotations\Console\Commands\ExpireQuotations;
 use App\Modules\Quotations\Filament\Pages\QuotationConversion;
+use App\Modules\Quotations\Filament\RelationManagers\ContactQuotationsRelationManager;
 use App\Modules\Quotations\Models\Quotation;
 use App\Modules\Quotations\Models\QuotationLine;
 use App\Modules\Quotations\Policies\QuotationLinePolicy;
@@ -11,6 +14,7 @@ use App\Modules\Quotations\Policies\QuotationPolicy;
 use App\Modules\Quotations\Support\QuotationReports;
 use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportRenderers;
+use App\Support\ResourceContributions;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -30,12 +34,32 @@ class QuotationsServiceProvider extends ServiceProvider
             Gate::policy($model, $policy);
         }
 
+        $this->loadRoutesFrom(__DIR__.'/routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/routes/console.php');
 
         // Laravel only auto-discovers commands in app/Console/Commands, so a command in a
         // module has to be registered here or it disappears from artisan — and from the
         // scheduler, silently.
         $this->commands([ExpireQuotations::class]);
+
+        $this->contributeToContacts();
+    }
+
+    /**
+     * The customer's quotes, on the customer — `docs/bexio-gap-plan.md` Phase 2, item 4.
+     *
+     * `quotations.contact_id` existed and no screen read it from this side. Offered from here because
+     * this module requires Invoicing and not the other way round: the same shape Projects uses for the
+     * Employee screen (App\Support\ResourceContributions).
+     */
+    private function contributeToContacts(): void
+    {
+        Contact::resolveRelationUsing(
+            'quotations',
+            fn (Contact $contact) => $contact->hasMany(Quotation::class),
+        );
+
+        ResourceContributions::addRelationManager(ContactResource::class, ContactQuotationsRelationManager::class);
     }
 
     /**

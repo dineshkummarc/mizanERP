@@ -33,6 +33,14 @@ class ProductForm
                     ->required()
                     ->maxLength(20),
 
+                TextInput::make('list_price')
+                    ->label('List price')
+                    ->numeric()
+                    ->step(0.01)
+                    ->minValue(0)
+                    ->nullable()
+                    ->helperText('What a quote or invoice line starts at when this product is chosen, less the customer\'s standing discount. Leave blank for something only ever bought.'),
+
                 Select::make('valuation_method')
                     ->label('Valuation Method')
                     ->options([

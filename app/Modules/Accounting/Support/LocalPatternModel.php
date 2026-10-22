@@ -52,6 +52,21 @@ class LocalPatternModel implements StructuredModel
     }
 
     /**
+     * A word list cannot read a photograph. Says so, naming the driver that can, rather than returning
+     * nulls that would become a draft bill with nothing on it.
+     *
+     * @param  array<string, mixed>  $schema
+     * @return array<string, mixed>
+     */
+    public function extractFromDocument(string $system, string $instruction, string $bytes, string $mediaType, array $schema): array
+    {
+        throw new \App\Support\Ai\ModelUnavailable(
+            'Reading a receipt needs the Claude driver: set AI_DRIVER=claude and ANTHROPIC_API_KEY. '
+            .'The local parser handles typed commands only.'
+        );
+    }
+
+    /**
      * @param  array<string, mixed>  $schema
      * @return array<string, mixed>
      */

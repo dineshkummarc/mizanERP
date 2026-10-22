@@ -64,6 +64,9 @@ class ChartOfAccountsSeeder extends Seeder
                 ['code' => '2220', 'name' => 'Social Security Payable', 'type' => 'liability', 'description' => 'Provincial social security employer contribution (SESSI/PESSI and equivalents)'],
                 ['code' => '2230', 'name' => 'Provident Fund Payable', 'type' => 'liability', 'description' => 'Employee contribution and employer match held for the fund'],
                 ['code' => '2300', 'name' => 'Salaries Payable', 'type' => 'liability', 'description' => 'Net salaries owed to employees'],
+                // What approved expense claims owe staff until a payslip reimburses them — docs/bexio-gap-plan.md
+                // Phase 3. Credited by ExpenseClaimPosting at approval, debited by the payslip's reimbursement line.
+                ['code' => '2310', 'name' => 'Expense Reimbursements Payable', 'type' => 'liability', 'description' => 'Approved expense claims not yet reimbursed to employees'],
                 ['code' => '2400', 'name' => 'Accounts Payable', 'type' => 'liability', 'description' => 'Amounts owed to suppliers on bills'],
                 // The other half of the deferral pair. Billed is not earned: an annual subscription invoiced
                 // in July is a liability to deliver eleven more months of it, and recognising the whole

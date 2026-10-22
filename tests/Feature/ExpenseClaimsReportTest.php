@@ -18,7 +18,7 @@ use Tests\Concerns\InteractsWithTenant;
  * Expense Claims — `docs/reports-expansion-plan.md` Phase 2.8.
  *
  * The report's value is a figure nothing else in the application states: what has been approved and not yet
- * paid, which is a liability nobody posts. So the tests are about that figure and about the two things a
+ * paid, which approval now books as a liability. So the tests are about that figure and about the two things a
  * reader could otherwise misread —
  *
  *  - **the period is the *financial* year**, not the calendar one, which is the mistake `ReportPeriod` exists
@@ -27,10 +27,9 @@ use Tests\Concerns\InteractsWithTenant;
  *    two rules pull in opposite directions and a report that applied one to both figures would be wrong in
  *    one of them.
  *
- * There is deliberately no reconciliation test, because there is no reconciliation to make: reimbursements
- * post to the account `expense_reimbursement` maps, which the shipped mapping points at the same code as
- * `meal_recovery`. The test below asserts that the report *says* so rather than leaving the absence to be
- * read as an oversight.
+ * The liability is in an account since docs/bexio-gap-plan.md Phase 3 — approval accrues it to the account
+ * `expense_reimbursement` maps, and the payslip clears it there — so the note names that account rather than
+ * explaining an absence. ExpenseClaimPostingTest covers the posting itself; this file covers the figures.
  */
 class ExpenseClaimsReportTest extends AccountingTestCase
 {
@@ -116,7 +115,7 @@ class ExpenseClaimsReportTest extends AccountingTestCase
 
     // ────────────────────────────────────────────────────── the liability ──
 
-    /** Approved and unpaid is the headline, and it is what the note calls a liability in no account. */
+    /** Approved and unpaid is the headline, and the note says which account now carries it. */
     public function test_the_headline_is_what_is_approved_and_unpaid(): void
     {
         $employee = $this->employee('EMP-1');
@@ -128,7 +127,7 @@ class ExpenseClaimsReportTest extends AccountingTestCase
 
         $this->assertSame(5_000.0, $payload['tiles'][0]['value'], 'only the approved-and-unpaid');
         $this->assertSame(3_000.0, $payload['tiles'][1]['value'], 'and what has actually been reimbursed');
-        $this->assertStringContainsString('AN ACCRUED LIABILITY IN NO ACCOUNT', $payload['note']);
+        $this->assertStringContainsString('ACCRUED IN 2310 UNTIL REIMBURSED', $payload['note']);
     }
 
     /**
@@ -245,24 +244,26 @@ class ExpenseClaimsReportTest extends AccountingTestCase
     }
 
     /**
-     * The report says why it cannot reconcile, rather than leaving the absence to be read as an oversight.
+     * The report says where the liability sits, rather than leaving the figure to be read as unbooked.
      *
-     * Reimbursements post to the account `expense_reimbursement` maps and the shipped mapping points that at
-     * the same code as `meal_recovery`. One account holding two unrelated flows cannot be attributed to
-     * either, and asserting the sentence is what keeps a future reader from "fixing" the omission by adding
-     * a comparison that would prove nothing.
+     * This used to assert the opposite — that reimbursements shared an account with meal recovery and so
+     * could not be reconciled, with the two mappings pinned to one code "if these are ever separated, the
+     * report can and should reconcile". They are separated: `docs/bexio-gap-plan.md` Phase 3 accrues an
+     * approved claim to the account `expense_reimbursement` maps, and the payslip clears it there.
      */
-    public function test_it_says_why_reimbursements_cannot_be_reconciled(): void
+    public function test_it_says_which_account_carries_the_liability(): void
     {
-        $this->claim($this->employee('EMP-1'), 3_000, ExpenseClaim::STATUS_SETTLED);
+        $this->claim($this->employee('EMP-1'), 3_000, ExpenseClaim::STATUS_APPROVED);
 
-        $this->assertStringContainsString('SHARE AN ACCOUNT WITH MEAL RECOVERY', $this->report()['note']);
+        $note = $this->report()['note'];
 
-        // And the premise: the two are mapped to one code, which is what makes the sentence true.
-        $this->assertSame(
+        $this->assertStringContainsString('ACCRUED IN 2310', $note);
+        $this->assertStringContainsString('REIMBURSEMENTS CLEAR 2310', $note);
+
+        // And the premise: reimbursements no longer share meal recovery's code.
+        $this->assertNotSame(
             config('accounting.payroll_accounts.meal_recovery'),
             config('accounting.payroll_accounts.expense_reimbursement'),
-            'if these are ever separated, the report can and should reconcile',
         );
     }
 

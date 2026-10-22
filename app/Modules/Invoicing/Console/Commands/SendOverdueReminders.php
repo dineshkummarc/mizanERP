@@ -51,7 +51,7 @@ class SendOverdueReminders extends Command
         }
 
         $this->table(
-            ['Invoice', 'Customer', 'Email', 'Due', 'Days', 'Outstanding'],
+            ['Invoice', 'Customer', 'Email', 'Due', 'Days', 'Outstanding', 'Reminder'],
             $due->map(fn (array $row): array => [
                 $row['invoice']->invoice_number,
                 $row['invoice']->contact?->name ?? '—',
@@ -59,6 +59,7 @@ class SendOverdueReminders extends Command
                 $row['invoice']->due_date?->toDateString() ?? '—',
                 $row['days'],
                 number_format($row['invoice']->outstanding(), 2),
+                $row['level'],
             ])->all(),
         );
 

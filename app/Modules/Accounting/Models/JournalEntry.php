@@ -47,7 +47,7 @@ class JournalEntry extends Model
     public const STATUS_POSTED = 'posted';
 
     protected $fillable = [
-        'entry_number', 'entry_date', 'reference', 'memo', 'entry_type',
+        'entry_number', 'entry_date', 'reference', 'memo', 'attachment_path', 'entry_type',
         'status', 'approved_by', 'approved_at', 'rejection_reason',
         'is_posted', 'posted_at', 'created_by', 'fiscal_year_id',
         'source_type', 'source_id', 'transaction_type_id', 'gnucash_id',

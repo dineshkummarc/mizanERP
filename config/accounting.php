@@ -32,7 +32,9 @@ return [
         'petrol_allowance' => '5300',
         'device_allowance' => '5400',
         'bonus_overtime' => '5500',
-        'expense_reimbursement' => '5600',
+        // A liability, not an expense, since docs/bexio-gap-plan.md Phase 3: the claim books its own
+        // expense when approved and credits this; the payslip's reimbursement line clears it.
+        'expense_reimbursement' => '2310',
         'meal_recovery' => '5600',
         'tax_payable' => '2100',
         'esi_payable' => '2200',

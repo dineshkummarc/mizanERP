@@ -176,6 +176,12 @@ class Quotation extends Model
         return $this->contact?->name ?? $this->lead?->display_label ?? 'Unknown';
     }
 
+    /** Where to email it: the customer's correspondence address, or the lead's. Null when there is neither. */
+    public function correspondenceEmail(): ?string
+    {
+        return $this->contact?->correspondenceEmail() ?: $this->lead?->email;
+    }
+
     /**
      * Recompute the totals from the lines.
      *

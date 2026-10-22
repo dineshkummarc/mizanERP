@@ -11,6 +11,7 @@ use App\Modules\Invoicing\Filament\Resources\Contacts\RelationManagers\PeopleRel
 use App\Modules\Invoicing\Filament\Resources\Contacts\Schemas\ContactForm;
 use App\Modules\Invoicing\Filament\Resources\Contacts\Tables\ContactsTable;
 use App\Modules\Invoicing\Models\Contact;
+use App\Support\ResourceContributions;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -50,6 +51,9 @@ class ContactResource extends Resource
         return [
             PeopleRelationManager::class,
             InvoicesRelationManager::class,
+            // Quotes, calls and next actions — offered by Quotations and CRM from their own providers,
+            // because this module may not name either (docs/bexio-gap-plan.md Phase 2, item 4).
+            ...ResourceContributions::relationManagersFor(static::class),
         ];
     }
 
