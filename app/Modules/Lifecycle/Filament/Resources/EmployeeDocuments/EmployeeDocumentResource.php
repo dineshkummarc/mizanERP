@@ -18,6 +18,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -85,11 +86,35 @@ class EmployeeDocumentResource extends Resource
 
             Select::make('kind')
                 ->options(array_combine(EmployeeDocument::KINDS, array_map('ucfirst', EmployeeDocument::KINDS)))
+                ->live()
                 ->required(),
 
-            TextInput::make('number')->maxLength(255),
+            TextInput::make('number')
+                ->label(fn (Get $get): string => $get('kind') === EmployeeDocument::KIND_INSURANCE ? 'Policy number' : 'Number')
+                ->maxLength(255),
 
-            DatePicker::make('issued_on')->native(false),
+            // A policy's own three facts — docs/bexio-gap-plan.md Phase 5, item 19. Its term and its scan
+            // are the fields every document has; its expiry is watched like every other document's.
+            TextInput::make('insurer')
+                ->maxLength(255)
+                ->visible(fn (Get $get): bool => $get('kind') === EmployeeDocument::KIND_INSURANCE),
+
+            TextInput::make('cover_amount')
+                ->label('Sum insured')
+                ->numeric()
+                ->minValue(0)
+                ->visible(fn (Get $get): bool => $get('kind') === EmployeeDocument::KIND_INSURANCE),
+
+            TextInput::make('premium')
+                ->label('Annual premium')
+                ->numeric()
+                ->minValue(0)
+                ->visible(fn (Get $get): bool => $get('kind') === EmployeeDocument::KIND_INSURANCE)
+                ->helperText('What the company pays, in the base currency.'),
+
+            DatePicker::make('issued_on')
+                ->label(fn (Get $get): string => $get('kind') === EmployeeDocument::KIND_INSURANCE ? 'Cover from' : 'Issued on')
+                ->native(false),
 
             DatePicker::make('expires_on')
                 ->native(false)
@@ -117,6 +142,8 @@ class EmployeeDocumentResource extends Resource
                 TextColumn::make('kind')->badge()->color('gray')->sortable(),
 
                 TextColumn::make('number')->placeholder('—')->searchable()->toggleable(),
+
+                TextColumn::make('insurer')->placeholder('—')->toggleable(),
 
                 TextColumn::make('expires_on')
                     ->label('Expires')

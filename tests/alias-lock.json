@@ -344,6 +344,7 @@
         "App\\Filament\\Pages\\CurrencyRevaluation": "App\\Modules\\Accounting\\Filament\\Pages\\CurrencyRevaluation",
         "App\\Filament\\Pages\\ConstructionCosting\\WipReport": "App\\Modules\\ConstructionCosting\\Filament\\Pages\\WipReport",
         "App\\Filament\\Pages\\Dashboard": "App\\Modules\\Core\\Filament\\Pages\\Dashboard",
+        "App\\Filament\\Pages\\EobiReturnFile": "App\\Modules\\Payroll\\Filament\\Pages\\EobiReturnFile",
         "App\\Filament\\Pages\\FbrInvoiceReporting": "App\\Modules\\Invoicing\\Filament\\Pages\\FbrInvoiceReporting",
         "App\\Filament\\Pages\\FbrTaxFile": "App\\Modules\\Payroll\\Filament\\Pages\\FbrTaxFile",
         "App\\Filament\\Pages\\FindTransactions": "App\\Modules\\Accounting\\Filament\\Pages\\FindTransactions",

@@ -84,10 +84,31 @@ class ResourceContributions
         return array_values(array_map(fn (Closure $factory) => $factory(), self::$recordActions[$resource] ?? []));
     }
 
+    /**
+     * Bulk actions, the same way — the first is Payroll's tax certificates on the Employees list
+     * (docs/bexio-gap-plan.md Phase 5), where Employees may not name a certificate Payroll renders.
+     *
+     * @var array<class-string, array<string, Closure(): mixed>>
+     */
+    private static array $bulkActions = [];
+
+    /** @param  Closure(): mixed  $factory  builds a fresh BulkAction each time the table is configured */
+    public static function addBulkAction(string $resource, string $name, Closure $factory): void
+    {
+        self::$bulkActions[$resource][$name] = $factory;
+    }
+
+    /** @return array<int, mixed> */
+    public static function bulkActionsFor(string $resource): array
+    {
+        return array_values(array_map(fn (Closure $factory) => $factory(), self::$bulkActions[$resource] ?? []));
+    }
+
     /** For tests that need to assert what a resource looks like without contributions. */
     public static function flush(): void
     {
         self::$relationManagers = [];
         self::$recordActions = [];
+        self::$bulkActions = [];
     }
 }

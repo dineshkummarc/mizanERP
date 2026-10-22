@@ -82,7 +82,10 @@ class PayComponentRecorder
         return $amounts;
     }
 
-    /** What the employee's package for this month says this component is worth. */
+    /**
+     * What the employee's package says this component is worth in this month — through ComponentAmount,
+     * so an hourly wage or a 13th salary is recorded as the calculation paid it.
+     */
     private function packagedAmount(Payslip $payslip, PayComponent $component): float
     {
         $setting = $this->settingFor($payslip);
@@ -91,9 +94,18 @@ class PayComponentRecorder
             return 0.0;
         }
 
-        return round((float) EmployeeSettingComponent::where('employee_setting_id', $setting->getKey())
+        $row = EmployeeSettingComponent::query()
+            ->where('employee_setting_id', $setting->getKey())
             ->where('pay_component_id', $component->getKey())
-            ->value('amount'), 2);
+            ->first();
+
+        if (! $row) {
+            return 0.0;
+        }
+
+        $row->setRelation('component', $component);
+
+        return app(ComponentAmount::class)->monthly($row, $payslip->employee_id, $payslip->month, $payslip->fiscalYear);
     }
 
     private function settingFor(Payslip $payslip): ?EmployeeSetting

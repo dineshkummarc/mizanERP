@@ -4,6 +4,7 @@ namespace App\Modules\Payroll;
 
 use App\Events\RaisingMonthlyPayments;
 use App\Modules\Accounting\Models\Payment;
+use App\Modules\Employees\Filament\Resources\Employees\EmployeeResource;
 use App\Modules\Employees\Filament\Resources\EmployeeSettings\EmployeeSettingResource;
 use App\Modules\Employees\Models\EmployeeSetting;
 use App\Modules\Payroll\Console\Commands\CheckPayrollAccounts;
@@ -12,11 +13,13 @@ use App\Modules\Payroll\Console\Commands\PostPendingPayrollEntries;
 use App\Modules\Payroll\Console\Commands\SetPayrollAutoPosting;
 use App\Modules\Payroll\Console\Commands\VerifyPayComponents;
 use App\Modules\Payroll\Events\PayslipReviewed;
+use App\Modules\Payroll\Filament\Pages\EobiReturnFile;
 use App\Modules\Payroll\Filament\Pages\FbrTaxFile;
 use App\Modules\Payroll\Filament\Pages\PayrollRegister;
 use App\Modules\Payroll\Filament\Pages\SalaryBankFile;
 use App\Modules\Payroll\Filament\Pages\TaxSummary;
 use App\Modules\Payroll\Filament\RelationManagers\EmployeeSettingComponentsRelationManager;
+use App\Modules\Payroll\Filament\Support\WithholdingCertificatesBulkAction;
 use App\Modules\Payroll\Listeners\CopyReviewOntoPayment;
 use App\Modules\Payroll\Listeners\RaiseSalaryPayments;
 use App\Modules\Payroll\Models\AnnualTax;
@@ -96,6 +99,16 @@ class PayrollServiceProvider extends ServiceProvider
         ReportCatalogue::register('Payroll & tax', TaxSummary::class, 'Tax withheld per employee for the year, with the slab it fell in.');
         ReportCatalogue::register('Payroll & tax', FbrTaxFile::class, 'The withholding statement, in the format FBR accepts.');
         ReportCatalogue::register('Payroll & tax', SalaryBankFile::class, 'Salary payments as a bank upload file, for a payroll month.');
+        // Written and wired to nothing until docs/bexio-gap-plan.md Phase 5, item 17.
+        ReportCatalogue::register('Payroll & tax', EobiReturnFile::class, 'The monthly EOBI return, as the payslips carry it, for the portal.');
+
+        // Tax deduction certificates for every selected employee at once — Phase 5, item 18. Offered on
+        // the Employees list from here, because the certificate is Payroll's and Employees names nothing.
+        ResourceContributions::addBulkAction(
+            EmployeeResource::class,
+            'withholdingCertificates',
+            fn () => WithholdingCertificatesBulkAction::make(),
+        );
 
         // A payslip's review decision is copied onto the salary payment waiting on it. Registered here
         // rather than in a global EventServiceProvider because the pair is Payroll's business — see
@@ -141,6 +154,7 @@ class PayrollServiceProvider extends ServiceProvider
         ], ['employee']);
         ReportRenderers::register('FbrTaxFile', fn (string $asOf): array => app(PayrollReports::class)->taxFile($asOf));
         ReportRenderers::register('SalaryBankFile', fn (string $asOf): array => app(PayrollReports::class)->salaryFile($asOf));
+        ReportRenderers::register('EobiReturnFile', fn (string $asOf): array => app(PayrollReports::class)->eobiReturn($asOf));
 
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);

@@ -31,8 +31,18 @@ class PayComponent extends Model
 
     public const KIND_DEDUCTION = 'deduction';
 
+    /** What the amount is per — docs/bexio-gap-plan.md Phase 5, item 20. See ComponentAmount. */
+    public const BASIS_MONTHLY = 'monthly';
+
+    public const BASIS_PER_HOUR = 'per_hour';
+
+    public const BASIS_ANNUAL = 'annual';
+
+    /** @var array<int, string> the payroll year's months, July first — what `pays_in_month` is chosen from */
+    public const MONTHS = ['July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March', 'April', 'May', 'June'];
+
     protected $fillable = [
-        'code', 'label', 'kind', 'account_key', 'account_id',
+        'code', 'label', 'kind', 'basis', 'pays_in_month', 'account_key', 'account_id',
         'is_taxable', 'is_column_backed', 'is_active', 'sort', 'description',
         'prorates',
     ];
@@ -47,6 +57,7 @@ class PayComponent extends Model
 
     protected $attributes = [
         'kind' => self::KIND_EARNING,
+        'basis' => self::BASIS_MONTHLY,
         'is_taxable' => true,
         'is_column_backed' => false,
         // False, which is the conservative direction: an existing allowance keeps

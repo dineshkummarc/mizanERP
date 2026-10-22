@@ -1,8 +1,8 @@
 # What bexio has that we do not
 
 **Created:** 2026-10-22
-**Status:** Phases 1 to 4 built on 2026-10-22 — what each item turned out to be is under §3.1 to
-§3.4. Phase 5 stands as written.
+**Status:** All five phases built on 2026-10-22 — what each item turned out to be is under §3.1 to
+§3.5. What stays unbuilt is listed under "Not planned, and why" at the end of §3.
 **Source read:** the bexio feature pages at `bexio.com/en-CH` — `functions`, `contact-management`,
 `sales-process-and-expense-management`, `expense-management`, `accounting`, `payroll-accounting`,
 `banking`, `bexio-pay`. Marketing pages, not a manual: where bexio says "automatic" the mechanism is
@@ -363,6 +363,37 @@ step that is not deterministic is the one that is stood in for.
 20. **Hourly and annual pay components.** A `basis` on `pay_components` — `monthly`, `per_hour`,
     `annual` — so an hourly wage multiplies attendance hours and a 13th salary or annual bonus accrues
     monthly and pays in a named month. No new columns on `payslips`. **2–3 days.**
+
+#### 3.5 What Phase 5 turned out to be (built 2026-10-22)
+
+- **The EOBI return is a page in the hub beside the FBR tax file**, with the same month picker, a
+  CSV download, the service's own readiness sentence when a month has nothing, and the minimum-wage
+  warnings under the table. The explorer pane draws it as a file report from a date. Nothing in the
+  service changed; it had simply never been reached.
+- **Bulk certificates are two bulk actions on the Employees list and one loop behind them.**
+  `CertificateBatch` takes a "what is missing" closure and a "render" closure, bundles the issuable
+  into a zip (`DocumentBundle`, which keeps two employees of the same name apart) or emails each
+  person their own (`DocumentIssued`, to the account address or the personal one, as a payslip
+  goes), and names everybody left out and why. The income certificate's action is Employees' own;
+  the tax certificate's is Payroll's, contributed through a third kind of
+  `ResourceContributions` entry, since Employees names nothing.
+- **Insurance is a document kind, not a table.** A policy is a number, a term and a scan — what
+  `employee_documents` already is — so it gained `insurance` as a kind and three columns a visa
+  lacks (insurer, sum insured, premium), shown only for that kind. The expiry reminders, the report
+  and the dashboard tile watch it unchanged. The plan's `employee_insurances` table would have been
+  a second copy of the expiry machinery.
+- **A component's amount has a basis.** `pay_components.basis` is `monthly` (every existing row),
+  `per_hour` (times the hours attendance recorded in the month — nothing without Attendance, rather
+  than a guess) or `annual` (whole in `pays_in_month`, nothing in the other eleven).
+  `ComponentAmount` answers for both the calculation and the recorder, so the payslip and its
+  component rows cannot disagree; the annual tax projection spreads a lump sum over twelve rather
+  than multiplying it by the months ahead; attendance pro-rating leaves hourly and annual components
+  alone. Not built: a monthly *accrual* of the annual amount in the ledger — the expense lands in the
+  month it is paid, which is how the bonus column always behaved.
+
+Tests: `EobiReturnPageTest` (4), `CertificateBatchTest` (5), `InsuranceDocumentTest` (2),
+`PayComponentBasisTest` (3). The reports-hub floor in `ReportPaneTest` rises to 53 with the new
+report.
 
 ### Not planned, and why
 

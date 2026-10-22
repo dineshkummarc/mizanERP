@@ -65,6 +65,8 @@ class EmailTemplate extends Model
         'next_action_due' => ['employee_name', 'count', 'company'],
         // Access to a company for somebody outside it — Phase 2, item 10.
         'company_invitation' => ['name', 'company', 'roles', 'inviter'],
+        // A certificate emailed to the person it is about, attached — Phase 5, item 18.
+        'document_issued' => ['employee_name', 'document', 'company'],
     ];
 
     protected $fillable = ['key', 'subject', 'greeting', 'body', 'action_label', 'closing', 'is_active'];

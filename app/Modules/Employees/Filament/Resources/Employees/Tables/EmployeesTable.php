@@ -4,9 +4,12 @@ namespace App\Modules\Employees\Filament\Resources\Employees\Tables;
 
 use App\Filament\Support\CustomFieldsSchema;
 use App\Modules\Core\Models\Bank;
+use App\Modules\Employees\Filament\Resources\Employees\EmployeeResource;
+use App\Modules\Employees\Filament\Support\IncomeCertificatesBulkAction;
 use App\Modules\Employees\Models\Employee;
 use App\Support\EmployeeAccess;
 use App\Support\LandlordUserColumn;
+use App\Support\ResourceContributions;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -133,6 +136,10 @@ class EmployeesTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    // Certificates for many at once — docs/bexio-gap-plan.md Phase 5, item 18. The income
+                    // certificate is this module's; the tax certificate is Payroll's and arrives from there.
+                    IncomeCertificatesBulkAction::make(),
+                    ...ResourceContributions::bulkActionsFor(EmployeeResource::class),
                     DeleteBulkAction::make(),
                 ]),
             ]);

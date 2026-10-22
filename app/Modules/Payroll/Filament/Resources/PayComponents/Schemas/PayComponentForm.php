@@ -47,6 +47,31 @@ class PayComponentForm
                 ->visible(fn (Get $get): bool => $get('kind') === PayComponent::KIND_EARNING)
                 ->helperText('Off for money that is not income — a reimbursement of the employee\'s own spending.'),
 
+            // What the amount is per — docs/bexio-gap-plan.md Phase 5, item 20. Not offered on the
+            // column-backed components: their arithmetic is payroll's own.
+            Select::make('basis')
+                ->label('The amount is')
+                ->options([
+                    PayComponent::BASIS_MONTHLY => 'Per month — paid as it stands',
+                    PayComponent::BASIS_PER_HOUR => 'Per hour — times the hours attendance recorded',
+                    PayComponent::BASIS_ANNUAL => 'Per year — paid whole in one month',
+                ])
+                ->default(PayComponent::BASIS_MONTHLY)
+                ->selectablePlaceholder(false)
+                ->live()
+                ->visible(fn (?PayComponent $record): bool => ! $record?->is_column_backed)
+                ->helperText(fn (Get $get): string => match ($get('basis')) {
+                    PayComponent::BASIS_PER_HOUR => 'An hourly wage. Needs the Attendance module: without recorded hours it pays nothing.',
+                    PayComponent::BASIS_ANNUAL => 'A 13th salary or an annual bonus: the month named below carries the whole amount, the others none.',
+                    default => 'The package amount lands on every payslip.',
+                }),
+
+            Select::make('pays_in_month')
+                ->label('Paid in')
+                ->options(array_combine(PayComponent::MONTHS, PayComponent::MONTHS))
+                ->visible(fn (Get $get): bool => $get('basis') === PayComponent::BASIS_ANNUAL)
+                ->required(fn (Get $get): bool => $get('basis') === PayComponent::BASIS_ANNUAL),
+
             // Only offered on earnings, and only where it can do anything. A deduction
             // never pro-rates by attendance — being away does not reduce what somebody
             // owes — so the flag would be a switch with no effect.

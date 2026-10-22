@@ -5,6 +5,7 @@ namespace App\Modules\Payroll\Support;
 use App\Modules\Core\Models\FiscalYear;
 use App\Modules\Payroll\Models\PayComponent;
 use App\Modules\Payroll\Models\Payslip;
+use App\Modules\Payroll\Services\EobiReturn;
 use App\Modules\Payroll\Services\PayrollRegister;
 use App\Modules\Payroll\Services\SalaryBankExportService;
 use App\Modules\Payroll\Services\WithholdingTaxSummary;
@@ -109,6 +110,33 @@ class PayrollReports
             count($rows),
             (float) collect($rows)->sum('amount'),
             'Payments',
+            $this->period($asOf, $year),
+        );
+    }
+
+    /**
+     * The monthly EOBI return, summarised — `docs/bexio-gap-plan.md` Phase 5, item 17.
+     *
+     * The month comes from the date, as the salary file's does. The file itself is released from the
+     * report's own page.
+     *
+     * @return array<string, mixed>
+     */
+    public function eobiReturn(string $asOf): array
+    {
+        $date = Carbon::parse($asOf);
+        $year = $this->fiscalYear($asOf);
+
+        $summary = $year === null
+            ? ['employees' => 0, 'grand_total' => 0.0]
+            : app(EobiReturn::class)->summary($date->format('F'), $year);
+
+        return $this->fileReport(
+            'EobiReturnFile',
+            'EOBI Return',
+            (int) $summary['employees'],
+            (float) $summary['grand_total'],
+            'Employees',
             $this->period($asOf, $year),
         );
     }

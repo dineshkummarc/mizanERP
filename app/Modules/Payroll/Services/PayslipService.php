@@ -52,7 +52,7 @@ class PayslipService
      *
      * @return array{earnings: float, taxable_earnings: float, deductions: float}
      */
-    protected function componentTotals(?EmployeeSetting $setting): array
+    protected function componentTotals(?EmployeeSetting $setting, string $month = '', ?FiscalYear $fiscalYear = null, bool $projecting = false): array
     {
         $empty = ['earnings' => 0.0, 'taxable_earnings' => 0.0, 'deductions' => 0.0];
 
@@ -67,8 +67,16 @@ class PayslipService
                 && $row->component->is_active
                 && ! $row->component->is_column_backed);
 
+        // What each component pays *this month* — an hourly wage is hours times the rate, a 13th
+        // salary is whole in its month and nothing in the others (docs/bexio-gap-plan.md Phase 5,
+        // item 20). The annual projection asks for a month's worth instead, so a lump sum is spread
+        // over the year it is taxed in rather than multiplied by the months ahead.
+        $amounts = app(ComponentAmount::class);
+
         foreach ($rows as $row) {
-            $amount = round((float) $row->amount, 2);
+            $amount = $projecting
+                ? $amounts->projectedMonthly($row, $setting->employee_id, $month, $fiscalYear)
+                : $amounts->monthly($row, $setting->employee_id, $month, $fiscalYear);
 
             if ($row->component->isEarning()) {
                 $empty['earnings'] = round($empty['earnings'] + $amount, 2);
@@ -178,7 +186,7 @@ class PayslipService
         $data['overtime_multiplier'] = $overtime['multiplier'] ?? null;
 
         // Allowances and deductions added as components rather than columns.
-        $components = $this->componentTotals($setting);
+        $components = $this->componentTotals($setting, $month, $fiscalYear);
         $data['component_earnings'] = $components['earnings'];
         $data['component_deductions'] = $components['deductions'];
 
@@ -300,7 +308,7 @@ class PayslipService
                                  + (float) ($empSetting->extra_work_hours ?? 0)
                                  // Taxable components only: a reimbursement is not
                                  // income and must not raise anybody's tax.
-                                 + $this->componentTotals($empSetting)['taxable_earnings'];
+                                 + $this->componentTotals($empSetting, $month, $fiscalYear, projecting: true)['taxable_earnings'];
 
                 if ($empSetting->id == $setting->id) {
                     // This month's figures stand in for the rest of the year, so the
@@ -458,7 +466,10 @@ class PayslipService
                 && $row->component->is_active
                 && ! $row->component->is_column_backed
                 && $row->component->isEarning()
-                && $row->component->prorates);
+                && $row->component->prorates
+                // Hours are already attendance; a lump sum is not a month's pay. Only a monthly
+                // amount scales with the days paid — docs/bexio-gap-plan.md Phase 5, item 20.
+                && $row->component->basis === PayComponent::BASIS_MONTHLY);
 
         if ($prorating->isEmpty()) {
             return $unchanged;
