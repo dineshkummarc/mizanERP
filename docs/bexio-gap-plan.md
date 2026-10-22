@@ -1,8 +1,11 @@
 # What bexio has that we do not
 
 **Created:** 2026-10-22
-**Status:** All five phases built on 2026-10-22 — what each item turned out to be is under §3.1 to
-§3.5. What stays unbuilt is listed under "Not planned, and why" at the end of §3.
+**Status:** All five phases built and **deployed to production on 2026-10-22** — phases 1–4 as
+`13a736de`, phase 5 as `c23cb041`, both live on https://mizan.erbium.tech with every tenant migration
+run and the baseline rows seeded (2310 Expense Reimbursements Payable, the `supplier-bill` transaction
+type). What each item turned out to be is under §3.1 to §3.5; what stays unbuilt is listed under
+"Not planned, and why" at the end of §3.
 **Source read:** the bexio feature pages at `bexio.com/en-CH` — `functions`, `contact-management`,
 `sales-process-and-expense-management`, `expense-management`, `accounting`, `payroll-accounting`,
 `banking`, `bexio-pay`. Marketing pages, not a manual: where bexio says "automatic" the mechanism is
@@ -166,7 +169,7 @@ on; here a person downloads a PDF and opens their mail client, and the app does 
    repeat, selecting `invoice_overdue_1/2/3` wording (falling back to `invoice_overdue`). No fee, no
    interest — `DunningSettingsSection` says why. **1 day.**
 
-#### 3.1 What Phase 1 turned out to be (built 2026-10-22)
+#### 3.1 What Phase 1 turned out to be (built and deployed 2026-10-22)
 
 Four things differ from the sketch above, and two of them are the plan being wrong.
 
@@ -217,7 +220,7 @@ Every table this phase needs already exists; it is relation managers and four co
     default), a signed link that creates the user and attaches them to this company only. The role and
     the multi-company membership exist; the front door does not. **1 day.**
 
-#### 3.2 What Phase 2 turned out to be (built 2026-10-22)
+#### 3.2 What Phase 2 turned out to be (built and deployed 2026-10-22)
 
 The boundary did the designing. Invoicing may name neither CRM, Quotations nor Employees
 (`ModuleBoundaryTest`), and the plan above had all three tabs and the owner relation on the Contact
@@ -267,7 +270,7 @@ Tests: `ContactAccountTest` (9), `NextActionRemindersTest` (6), `UserInvitationT
     reimbursements liability; settlement reverses it. `ExpenseReports` stops having to explain the
     hole it reports. **2 days.**
 
-#### 3.3 What Phase 3 turned out to be (built 2026-10-22)
+#### 3.3 What Phase 3 turned out to be (built and deployed 2026-10-22)
 
 The same boundary shaped all three items: Accounting may not name Invoicing or Expenses, and every one
 of them needed Accounting to do something with the other module's document.
@@ -323,7 +326,7 @@ type); `BillPaymentService` creates the type itself if it is missing.
 16. **Mobile capture** is `desktop-mobile-plan.md` M1 (PWA, camera upload) and that plan's API
     hardening comes first. Not repeated here.
 
-#### 3.4 What Phase 4 turned out to be (built 2026-10-22)
+#### 3.4 What Phase 4 turned out to be (built and deployed 2026-10-22)
 
 - **The model contract grew one method, not a second contract.** `StructuredModel::extractFromDocument()`
   takes the bytes and a media type beside the instruction and returns the same kind of thing `extract()`
@@ -364,7 +367,7 @@ step that is not deterministic is the one that is stood in for.
     `annual` — so an hourly wage multiplies attendance hours and a 13th salary or annual bonus accrues
     monthly and pays in a named month. No new columns on `payslips`. **2–3 days.**
 
-#### 3.5 What Phase 5 turned out to be (built 2026-10-22)
+#### 3.5 What Phase 5 turned out to be (built and deployed 2026-10-22)
 
 - **The EOBI return is a page in the hub beside the FBR tax file**, with the same month picker, a
   CSV download, the service's own readiness sentence when a month has nothing, and the minimum-wage
