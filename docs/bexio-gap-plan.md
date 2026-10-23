@@ -4,8 +4,9 @@
 **Status:** All five phases built and **deployed to production on 2026-10-22** — phases 1–4 as
 `13a736de`, phase 5 as `c23cb041`, both live on https://mizan.erbium.tech with every tenant migration
 run and the baseline rows seeded (2310 Expense Reimbursements Payable, the `supplier-bill` transaction
-type). What each item turned out to be is under §3.1 to §3.5; what stays unbuilt is listed under
-"Not planned, and why" at the end of §3.
+type). What each item turned out to be is under §3.1 to §3.5. §3.6 (a claim paid by bank transfer)
+was built afterwards and deployed on 2026-10-23. What stays unbuilt is listed under "Not planned, and
+why" at the end of §3.
 **Source read:** the bexio feature pages at `bexio.com/en-CH` — `functions`, `contact-management`,
 `sales-process-and-expense-management`, `expense-management`, `accounting`, `payroll-accounting`,
 `banking`, `bexio-pay`. Marketing pages, not a manual: where bexio says "automatic" the mechanism is
@@ -305,8 +306,9 @@ of them needed Accounting to do something with the other module's document.
   and posting are one transaction; a claim without a category books to Miscellaneous; deleting an
   approved claim reverses the accrual. Claims approved before this were never accrued and still reach
   the ledger through the payslip alone, which the report's note says. Paying a claim by bank
-  transfer rather than payslip is not built: the payee would be the employee, and nothing on an
-  Employee payment can say it is settling a claim without Accounting naming Expenses.
+  transfer rather than payslip was left out here — the payee would be the employee, and nothing on
+  an Employee payment could say it was settling a claim — and §3.6 then built it on this same
+  contract.
 
 Tests: `BillBankPaymentTest` (7), `StatementImportTest` (8), `ExpenseClaimPostingTest` (5); two
 assertions in `ExpenseClaimsReportTest` that pinned the old "in no account" wording now pin the new.
@@ -397,6 +399,36 @@ step that is not deterministic is the one that is stood in for.
 Tests: `EobiReturnPageTest` (4), `CertificateBatchTest` (5), `InsuranceDocumentTest` (2),
 `PayComponentBasisTest` (3). The reports-hub floor in `ReportPaneTest` rises to 53 with the new
 report.
+
+#### 3.6 Paying a claim by bank transfer (built 2026-10-22, deployed 2026-10-23)
+
+The one thing §3.3 left out, built on the contract §3.3 introduced for bills. `ExpenseClaim`
+implements `PayableDocument`: the employee is the payee, so the bank file pays them on the bank
+details of their record, and `settleByPayment()` posts the claim's own settlement through
+`ExpenseClaimBankPayment` — debit the reimbursement liability approval credited, credit the bank.
+Accounting still names nothing in Expenses.
+
+- **Pay through the bank** on an approved claim raises a draft `Payment` under a new
+  `expense-reimbursement` transaction type (seeded; informational, like `supplier-bill`), from a chosen
+  company bank account and value date. Approving the payment, or releasing it in a batch, settles
+  the claim.
+- **Raised, the claim leaves the payroll pool at once.** `reimbursableFor()` and
+  `awaitingSettlementFor()` read a new `reimbursableByPayroll()` scope — approved and without a
+  payment — so a draft waiting in the next file and a payslip cannot both pay it. The liability stands
+  until the money moves: `awaitingSettlement()` still counts the claim, and the report's owed figure
+  with it. A draft deleted before it went nulls `payment_id` (the foreign key already did) and the
+  claim is payroll's again, with no code for that case.
+- **A claim never accrued is accrued on the way.** The settlement calls `accrue()` first, a no-op for
+  a claim that has its entry, so a claim approved before posting began books its expense once and
+  then clears.
+- Both lists say which way a claim went: the payments list reads "Expense claim #12 — EMP-007 -
+  Name", and the claim's Reimbursed-on column shows "Bank transfer, payment #N" where a payslip
+  would be, marked "not yet released" while it is a draft.
+
+Not built: paying part of a claim (a claim is one amount, paid whole) and withholding on this path
+(a reimbursement is not a payment for services).
+
+Tests: `ExpenseClaimBankPaymentTest` (8).
 
 ### Not planned, and why
 

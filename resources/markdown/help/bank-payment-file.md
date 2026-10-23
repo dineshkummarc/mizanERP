@@ -3,7 +3,7 @@
 ## What this builds
 
 The batch of outstanding payments — salaries and everything else (suppliers,
-petty cash replenishment, and more) — ready to hand to the bank as a CSV file.
+expense claims paid ahead of payday, petty cash replenishment, and more) — ready to hand to the bank as a CSV file.
 Nothing here is paid until you actually download that file; everything on
 this page is still "unreleased."
 

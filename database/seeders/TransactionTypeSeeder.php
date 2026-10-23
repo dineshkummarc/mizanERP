@@ -29,6 +29,9 @@ class TransactionTypeSeeder extends Seeder
             // A supplier bill paid through the bank file — docs/bexio-gap-plan.md Phase 3. The account is
             // informational: the bill posts its own settlement against Accounts Payable (BillPaymentService).
             ['code' => 'supplier-bill', 'name' => 'Supplier bill', 'account_code' => '2400', 'description' => 'Settles a supplier bill through the bank file; the bill itself carries the expense'],
+            // An approved expense claim paid by bank transfer — docs/bexio-gap-plan.md §3.6. Informational
+            // likewise: the claim clears the liability its approval booked (ExpenseClaimBankPayment).
+            ['code' => 'expense-reimbursement', 'name' => 'Expense reimbursement', 'account_code' => '2310', 'description' => 'Pays an approved expense claim by bank transfer; the claim itself carries the expense'],
 
             /*
              * Money coming in.

@@ -2,12 +2,16 @@
 
 namespace App\Modules\Expenses\Filament\Resources\ExpenseClaims\Tables;
 
+use App\Modules\Accounting\Models\CompanyBankAccount;
 use App\Modules\Expenses\Models\ExpenseClaim;
+use App\Modules\Expenses\Services\ExpenseClaimBankPayment;
 use App\Support\LandlordUserColumn;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
@@ -49,10 +53,15 @@ class ExpenseClaimsTable
 
                 TextColumn::make('payslip.month')
                     ->label('Reimbursed on')
+                    // A claim paid through the bank has no payslip; the payment it went out on stands in.
+                    ->state(fn (ExpenseClaim $record): ?string => $record->payslip?->month
+                        ?? ($record->payment_id ? 'Bank transfer' : null))
                     ->placeholder('—')
-                    ->description(fn (ExpenseClaim $record): ?string => $record->payslip
-                        ? 'payslip #'.$record->payslip_id
-                        : null)
+                    ->description(fn (ExpenseClaim $record): ?string => match (true) {
+                        $record->payslip !== null => 'payslip #'.$record->payslip_id,
+                        $record->payment_id !== null => 'payment #'.$record->payment_id.($record->isSettled() ? '' : ', not yet released'),
+                        default => null,
+                    })
                     ->toggleable(),
             ])
             ->defaultSort('claimed_on', 'desc')
@@ -115,6 +124,62 @@ class ExpenseClaimsTable
                         }
 
                         Notification::make()->success()->title('Refused, with your reason sent to the claimant.')->send();
+                    }),
+
+                /**
+                 * Pay an approved claim by bank transfer rather than on the payslip — docs/bexio-gap-plan.md
+                 * §3.6. Raises a draft payment for the next bank file to the employee's bank details; the claim
+                 * leaves the payroll pool at once and is settled when the payment is approved or released.
+                 */
+                Action::make('payThroughBank')
+                    ->label('Pay through the bank')
+                    ->icon('heroicon-o-building-library')
+                    ->color('gray')
+                    ->visible(fn (ExpenseClaim $record): bool => $record->isApproved()
+                        && $record->payment_id === null
+                        && modules()->enabled('accounting')
+                        && (auth()->user()?->can('decide', $record) ?? false))
+                    ->modalHeading(fn (ExpenseClaim $record): string => 'Pay claim #'.$record->getKey().' through the bank')
+                    ->modalDescription(fn (ExpenseClaim $record): string => number_format((float) $record->amount, 2)
+                        .' goes into the next bank file, to the bank details on the employee\'s record, instead of onto '
+                        .'their payslip. The claim is settled when the payment is approved or released.')
+                    ->modalSubmitActionLabel('Raise the payment')
+                    ->schema([
+                        Select::make('company_bank_account_id')
+                            ->label('Pay from')
+                            ->options(fn (): array => CompanyBankAccount::query()
+                                ->where('is_active', true)
+                                ->orderByDesc('is_default')
+                                ->pluck('title', 'id')
+                                ->all())
+                            ->default(fn (): ?int => CompanyBankAccount::query()
+                                ->where('is_active', true)
+                                ->orderByDesc('is_default')
+                                ->value('id'))
+                            ->required(),
+
+                        DatePicker::make('value_date')
+                            ->label('Value date')
+                            ->default(now()->toDateString())
+                            ->required(),
+                    ])
+                    ->action(function (array $data, ExpenseClaim $record): void {
+                        try {
+                            $payment = app(ExpenseClaimBankPayment::class)->raise(
+                                $record,
+                                (int) $data['company_bank_account_id'],
+                                $data['value_date'],
+                            );
+                        } catch (\InvalidArgumentException $e) {
+                            Notification::make()->danger()->title($e->getMessage())->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title('Payment #'.$payment->getKey().' raised for the next bank file; payroll will not reimburse this claim.')
+                            ->send();
                     }),
 
                 EditAction::make(),

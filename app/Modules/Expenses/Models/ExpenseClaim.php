@@ -10,11 +10,14 @@ use App\Modules\Core\Models\User;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Expenses\Notifications\ExpenseClaimDecided;
 use App\Modules\Expenses\Notifications\ExpenseClaimSubmitted;
+use App\Modules\Expenses\Services\ExpenseClaimBankPayment;
 use App\Modules\Expenses\Services\ExpenseClaimPosting;
 use App\Modules\Payroll\Models\Payslip;
+use App\Support\Contracts\PayableDocument;
 use App\Support\TenantTransaction;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Notification;
 use InvalidArgumentException;
@@ -27,9 +30,30 @@ use InvalidArgumentException;
  * another subject, and a second way of doing the same thing would be a second thing
  * to get wrong.
  */
-class ExpenseClaim extends Model
+class ExpenseClaim extends Model implements PayableDocument
 {
     use Auditable;
+
+    // ─── PayableDocument — paid by bank transfer, docs/bexio-gap-plan.md §3.6 ───
+
+    /** The bank file pays the employee, on the bank details of their record. */
+    public function payee(): ?EloquentModel
+    {
+        // Loaded explicitly: a list of payments reaches this through the morph, where the lazy-load guard
+        // would otherwise trip on the second row (`user` is what display_label and the file read).
+        return $this->loadMissing('employee.user')->employee;
+    }
+
+    public function paymentLabel(): string
+    {
+        return "Expense claim #{$this->getKey()}";
+    }
+
+    /** Approving the payment clears the liability approval booked; see ExpenseClaimBankPayment::settle(). */
+    public function settleByPayment(EloquentModel $payment): ?EloquentModel
+    {
+        return app(ExpenseClaimBankPayment::class)->settle($this, $payment);
+    }
 
     public const STATUS_PENDING = 'pending';
 
@@ -114,10 +138,24 @@ class ExpenseClaim extends Model
         return $query->where('status', self::STATUS_PENDING);
     }
 
-    /** Approved and not yet paid: what payroll owes this employee back. */
+    /** Approved and not yet paid: what the company owes this employee back, however it will be paid. */
     public function scopeAwaitingSettlement(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_APPROVED);
+    }
+
+    /**
+     * Owed, and payroll's to pay: a claim with a bank payment raised for it is spoken for, even while
+     * that payment is still a draft — a payslip reimbursing it too would pay the person twice.
+     */
+    public function scopeReimbursableByPayroll(Builder $query): Builder
+    {
+        return $query->awaitingSettlement()->whereNull('payment_id');
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === self::STATUS_APPROVED;
     }
 
     public function isPending(): bool

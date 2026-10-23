@@ -44,7 +44,8 @@ class ExpenseClaimService implements ReimbursableClaims
         return round((float) ExpenseClaim::query()
             ->where('employee_id', $employeeId)
             ->where(function ($query) use ($includingPayslipId): void {
-                $query->where('status', ExpenseClaim::STATUS_APPROVED)
+                // Not a claim with a bank payment raised for it — that one is being paid the other way.
+                $query->where(fn ($owed) => $owed->reimbursableByPayroll())
                     ->when(
                         $includingPayslipId,
                         fn ($q) => $q->orWhere(fn ($own) => $own
@@ -60,7 +61,7 @@ class ExpenseClaimService implements ReimbursableClaims
      */
     public function awaitingSettlementFor(int $employeeId): Collection
     {
-        return ExpenseClaim::awaitingSettlement()
+        return ExpenseClaim::reimbursableByPayroll()
             ->where('employee_id', $employeeId)
             ->orderBy('claimed_on')
             ->get();

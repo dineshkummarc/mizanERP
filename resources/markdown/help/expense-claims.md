@@ -45,6 +45,17 @@ covers it — you'll see which payslip against the claim in the list. If a
 payslip that reimbursed a claim is later corrected downward or deleted, the
 claim is put back to Approved and unpaid rather than left in limbo.
 
+### Paying it through the bank instead <!-- requires: ExpenseClaimApprove -->
+
+An approved claim can also be paid on its own, ahead of payday. **Pay through
+the bank** on the row raises a draft payment for the next bank payment file,
+to the bank details on the employee's record, from the company account you
+choose. From that moment payroll leaves the claim alone: a payslip and a bank
+payment must never both pay it. The claim moves to **Reimbursed** when the
+payment is approved or released in a batch, and the list shows the payment
+number where a payslip would be. Delete the draft payment before it goes out
+and the claim is back with payroll. Needs the Accounting module.
+
 ## Roles and permissions
 
 - **View / Create / Update** — Employees hold these for their **own** claims

@@ -134,7 +134,9 @@ class PaymentsTable
         }
 
         if ($payable instanceof PayableDocument) {
-            return $payable->paymentLabel().' — '.($payable->payee()?->name ?? '—');
+            $payee = $payable->payee();
+
+            return $payable->paymentLabel().' — '.($payee instanceof Employee ? $payee->display_label : ($payee?->name ?? '—'));
         }
 
         return $payable->name ?? (string) $payable->getKey();
