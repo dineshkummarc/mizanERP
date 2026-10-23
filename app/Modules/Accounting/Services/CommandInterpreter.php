@@ -32,7 +32,7 @@ class CommandInterpreter
 
     /**
      * @param  string|null  $transcript  what a recogniser heard, when the command was dictated (§5)
-     * @param  string|null  $locale      the dictation language, so a badly-transcribing one is visible
+     * @param  string|null  $locale  the dictation language, so a badly-transcribing one is visible
      */
     public function interpret(
         string $utterance,

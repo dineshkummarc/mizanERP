@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Modules\Accounting\Models\Account;
-use App\Modules\Invoicing\Models\Contact;
-use App\Modules\Invoicing\Models\Invoice;
 use App\Modules\Accounting\Models\JournalEntryLine;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Services\InventoryService;
 use App\Modules\Inventory\Services\InventoryValuationService;
+use App\Modules\Invoicing\Models\Contact;
+use App\Modules\Invoicing\Models\Invoice;
 use App\Modules\Invoicing\Services\InvoiceService;
 use InvalidArgumentException;
 use Tests\AccountingTestCase;

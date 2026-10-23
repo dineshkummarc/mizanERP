@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Modules\Accounting\Models\Account;
-use App\Modules\Core\Models\FiscalYear;
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Services\FinancialReportService;
 use App\Modules\Accounting\Services\FiscalYearClosingService;
 use App\Modules\Accounting\Services\JournalEntryService;
+use App\Modules\Core\Models\FiscalYear;
 use App\Support\ModuleMap;
 use Tests\AccountingTestCase;
 

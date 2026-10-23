@@ -13,7 +13,7 @@ class CreateEmployeesTable extends Migration
             $table->foreignId('user_id')->index(); // soft ref -> landlord users
             $table->string('employee_id')->unique();
             $table->string('phone')->nullable();
-             $table->string('designation')->nullable();
+            $table->string('designation')->nullable();
             $table->string('department')->nullable();
             $table->date('date_of_joining')->nullable();
             $table->string('nic')->nullable();

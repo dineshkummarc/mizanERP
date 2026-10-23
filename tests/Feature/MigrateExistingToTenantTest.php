@@ -16,6 +16,7 @@ class MigrateExistingToTenantTest extends TestCase
     use RefreshDatabase;
 
     protected string $tenantDir;
+
     protected array $tenantFiles = [];
 
     protected function setUp(): void

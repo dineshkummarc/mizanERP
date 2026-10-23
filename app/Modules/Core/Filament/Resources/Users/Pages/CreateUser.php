@@ -2,10 +2,10 @@
 
 namespace App\Modules\Core\Filament\Resources\Users\Pages;
 
+use App\Events\UserCreated;
 use App\Filament\Concerns\RedirectsToIndex;
 use App\Modules\Core\Filament\Resources\Users\UserResource;
 use App\Modules\Core\Models\User;
-use App\Events\UserCreated;
 use Filament\Facades\Filament;
 use Filament\Resources\Pages\CreateRecord;
 

@@ -9,6 +9,4 @@ use RuntimeException;
  * failed" is useless to whoever has to fix it — an unregistered number, a
  * template still in review and an expired token all need different actions.
  */
-class WhatsAppException extends RuntimeException
-{
-}
+class WhatsAppException extends RuntimeException {}

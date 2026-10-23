@@ -2,15 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Core\Models\Bank;
 use App\Modules\Accounting\Models\Beneficiary;
 use App\Modules\Accounting\Models\CompanyBankAccount;
-use App\Modules\Employees\Models\Employee;
-use App\Modules\Employees\Models\EmployeeSetting;
 use App\Modules\Accounting\Models\Payment;
-use App\Modules\Payroll\Models\Payslip;
 use App\Modules\Accounting\Models\TransactionType;
 use App\Modules\Accounting\Services\BankPaymentExportService;
+use App\Modules\Core\Models\Bank;
+use App\Modules\Employees\Models\Employee;
+use App\Modules\Employees\Models\EmployeeSetting;
+use App\Modules\Payroll\Models\Payslip;
 use App\Modules\Payroll\Services\SalaryBankExportService;
 use Tests\AccountingTestCase;
 use Tests\Concerns\InteractsWithTenant;

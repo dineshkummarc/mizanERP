@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Employees\Models\Employee;
 use App\Modules\Accounting\Models\Payment;
 use App\Modules\Accounting\Models\TransactionType;
 use App\Modules\Accounting\Services\PaymentDetailsExport;
+use App\Modules\Employees\Models\Employee;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use OpenSpout\Reader\XLSX\Reader;
 use Tests\Concerns\InteractsWithTenant;

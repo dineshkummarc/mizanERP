@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Modules\Employees\Models\Employee;
 use App\Modules\Core\Models\FiscalYear;
+use App\Modules\Employees\Models\Employee;
 use App\Modules\Payroll\Models\Payslip;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;

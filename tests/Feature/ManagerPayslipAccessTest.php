@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Modules\Core\Models\Company;
+use App\Modules\Core\Models\User;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Payroll\Models\Payslip;
-use App\Modules\Core\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Payroll\Filament\Widgets\PayrollByEmployeeChart;
 use App\Modules\Core\Models\User;
+use App\Modules\Payroll\Filament\Widgets\PayrollByEmployeeChart;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;

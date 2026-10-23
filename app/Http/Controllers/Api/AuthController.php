@@ -16,14 +16,12 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        if (! Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid email or password'
+                'message' => 'Invalid email or password',
             ], 401);
         }
-
 
         $user = Auth::user();
         $token = $user->createToken('API Token')->plainTextToken;
@@ -31,8 +29,8 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
-            'token' => $token, 
-            'user' => $user
+            'token' => $token,
+            'user' => $user,
         ], 200);
     }
 }

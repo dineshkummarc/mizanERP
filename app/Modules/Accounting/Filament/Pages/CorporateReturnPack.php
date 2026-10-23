@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Filament\Pages;
 
 use App\Filament\Concerns\BelongsToModule;
+use App\Filament\Support\HelpAction;
 use App\Modules\Accounting\Services\CorporateReturnPack as PackService;
 use App\Modules\Core\Models\Company;
 use App\Modules\Core\Models\FiscalYear;
@@ -144,6 +145,7 @@ class CorporateReturnPack extends Page
     protected function getHeaderActions(): array
     {
         return [
+            HelpAction::make('corporate-return-pack', 'Corporate Return Pack: Help'),
             Action::make('save')
                 ->label('Save worksheet')
                 ->icon('heroicon-o-check')

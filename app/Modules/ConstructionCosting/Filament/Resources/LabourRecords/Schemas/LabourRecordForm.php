@@ -2,7 +2,6 @@
 
 namespace App\Modules\ConstructionCosting\Filament\Resources\LabourRecords\Schemas;
 
-use App\Support\Num;
 use App\Modules\Construction\Models\CostCode;
 use App\Modules\Construction\Models\Job;
 use App\Modules\Construction\Models\WbsNode;
@@ -10,6 +9,7 @@ use App\Modules\ConstructionCosting\Models\LabourRecord;
 use App\Modules\ConstructionCosting\Models\Trade;
 use App\Modules\ConstructionCosting\Models\Worker;
 use App\Modules\ConstructionCosting\Services\LabourRateService;
+use App\Support\Num;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;

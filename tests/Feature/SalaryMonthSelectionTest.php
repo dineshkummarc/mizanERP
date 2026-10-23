@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Modules\Accounting\Filament\Pages\BankPaymentFile;
+use App\Modules\Core\Models\FiscalYear;
+use App\Modules\Core\Models\User;
+use App\Modules\Employees\Models\Employee;
 use App\Modules\Payroll\Filament\Pages\FbrTaxFile;
 use App\Modules\Payroll\Filament\Pages\SalaryBankFile;
-use App\Modules\Employees\Models\Employee;
-use App\Modules\Core\Models\FiscalYear;
 use App\Modules\Payroll\Models\Payslip;
-use App\Modules\Core\Models\User;
 use Database\Seeders\TransactionTypeSeeder;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;

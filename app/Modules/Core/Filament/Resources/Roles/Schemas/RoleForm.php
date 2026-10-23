@@ -10,8 +10,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\Rules\Unique;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Unique;
 use Spatie\Permission\Models\Permission;
 
 class RoleForm

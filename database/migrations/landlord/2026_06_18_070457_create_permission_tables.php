@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 class CreatePermissionTables extends Migration
 {
@@ -32,8 +32,8 @@ class CreatePermissionTables extends Migration
                 $table->unsignedBigInteger($teamForeignKey)->nullable();
                 $table->index($teamForeignKey, 'roles_team_foreign_key_index');
             }
-            $table->string('name',100);
-            $table->string('guard_name',100);
+            $table->string('name', 100);
+            $table->string('guard_name', 100);
             $table->timestamps();
             if ($teams) {
                 $table->unique([$teamForeignKey, 'name', 'guard_name']);
@@ -47,7 +47,7 @@ class CreatePermissionTables extends Migration
 
             $table->string('model_type');
             $table->unsignedBigInteger($columnNames['model_morph_key']);
-            $table->index([$columnNames['model_morph_key'], 'model_type', ]);
+            $table->index([$columnNames['model_morph_key'], 'model_type']);
 
             $table->foreign('permission_id')
                 ->references('id')
@@ -70,7 +70,7 @@ class CreatePermissionTables extends Migration
 
             $table->string('model_type');
             $table->unsignedBigInteger($columnNames['model_morph_key']);
-            $table->index([$columnNames['model_morph_key'], 'model_type', ]);
+            $table->index([$columnNames['model_morph_key'], 'model_type']);
 
             $table->foreign('role_id')
                 ->references('id')

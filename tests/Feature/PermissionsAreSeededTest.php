@@ -53,7 +53,7 @@ class PermissionsAreSeededTest extends TestCase
         $this->assertSame(
             [],
             $missing,
-            "These permissions are checked in app/ but not declared in any module.php, so the check throws "
+            'These permissions are checked in app/ but not declared in any module.php, so the check throws '
             ."and the page 500s. Add each to its module's 'permissions' array:\n\n".implode("\n", $missing),
         );
     }

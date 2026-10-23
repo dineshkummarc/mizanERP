@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Employees\Filament\Resources\Employees\Pages\EditEmployee;
 use App\Modules\Core\Models\Bank;
+use App\Modules\Core\Models\User;
+use App\Modules\Employees\Filament\Resources\Employees\Pages\EditEmployee;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Employees\Models\EmployeeChangeRequest;
-use App\Modules\Core\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;

@@ -22,7 +22,7 @@ class WhatsAppDocument
     /**
      * @param  Closure(): string  $bytes  the file itself
      * @param  (Closure(): string)|null  $url  where a provider may fetch it; null
-     *                                        when there is no way to publish it
+     *                                         when there is no way to publish it
      */
     public function __construct(
         public readonly string $filename,

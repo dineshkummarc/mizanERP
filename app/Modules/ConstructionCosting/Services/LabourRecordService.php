@@ -2,7 +2,6 @@
 
 namespace App\Modules\ConstructionCosting\Services;
 
-use App\Support\Num;
 use App\Modules\Construction\Models\CostCode;
 use App\Modules\Construction\Models\Job;
 use App\Modules\ConstructionCosting\Models\CostEntry;
@@ -10,6 +9,7 @@ use App\Modules\ConstructionCosting\Models\LabourRecord;
 use App\Modules\ConstructionCosting\Models\Trade;
 use App\Modules\ConstructionCosting\Models\Worker;
 use App\Modules\ConstructionCosting\Support\ResolvedLabourRate;
+use App\Support\Num;
 use App\Support\TenantTransaction;
 use Carbon\Carbon;
 use InvalidArgumentException;

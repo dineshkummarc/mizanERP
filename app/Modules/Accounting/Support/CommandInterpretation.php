@@ -18,7 +18,7 @@ class CommandInterpretation
 {
     /**
      * @param  array<int, string>  $questions  what the user must answer before this can be booked
-     * @param  array<int, string>  $flags      slots the model guessed at rather than read
+     * @param  array<int, string>  $flags  slots the model guessed at rather than read
      */
     public function __construct(
         public readonly CommandUtterance $utterance,

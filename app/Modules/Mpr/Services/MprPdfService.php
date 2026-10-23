@@ -2,12 +2,12 @@
 
 namespace App\Modules\Mpr\Services;
 
-use Exception;
 use App\Models\Mpr;
 use App\Modules\Core\Models\User;
-use Carbon\Carbon;
-use Illuminate\Support\Str;
 use App\Support\Pdf\Pdf;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Support\Str;
 
 class MprPdfService
 {

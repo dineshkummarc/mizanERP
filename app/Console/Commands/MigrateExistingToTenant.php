@@ -8,7 +8,6 @@ use App\Multitenancy\CompanyProvisioner;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
 
 /**
  * One-time (idempotent) migration of the pre-tenancy single-database dataset

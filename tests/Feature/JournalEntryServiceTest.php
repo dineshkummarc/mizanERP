@@ -4,17 +4,21 @@ namespace Tests\Feature;
 
 use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalEntry;
-use App\Modules\Core\Models\User;
 use App\Modules\Accounting\Services\JournalEntryService;
+use App\Modules\Core\Models\User;
 use InvalidArgumentException;
 use Tests\AccountingTestCase;
 
 class JournalEntryServiceTest extends AccountingTestCase
 {
     private JournalEntryService $service;
+
     private Account $cash;
+
     private Account $salaries;
+
     private User $maker;
+
     private User $approver;
 
     protected function setUp(): void

@@ -2,18 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Core\Models\Company;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Employees\Models\EmployeeSetting;
 use App\Modules\Payroll\Models\Payslip;
 use App\Modules\Payroll\Services\PayslipDeliveryService;
+use App\Modules\Payroll\Support\PayslipMediaLink;
 use App\Support\WhatsApp\TwilioWhatsAppSender;
 use App\Support\WhatsApp\WhatsAppDocument;
 use App\Support\WhatsApp\WhatsAppException;
 use App\Support\WhatsApp\WhatsAppSender;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
-use App\Modules\Core\Models\Company;
-use App\Modules\Payroll\Support\PayslipMediaLink;
 use Tests\AccountingTestCase;
 use Tests\Concerns\InteractsWithTenant;
 
@@ -190,7 +190,6 @@ class PayslipWhatsAppTwilioTest extends AccountingTestCase
 
         TwilioWhatsAppSender::assertSendable($huge);
     }
-
 
     // --- the Content Template path -------------------------------------------
 

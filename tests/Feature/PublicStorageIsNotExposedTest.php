@@ -31,7 +31,7 @@ class PublicStorageIsNotExposedTest extends TestCase
 
         $this->assertFalse(
             file_exists($path) || is_link($path),
-            "public/storage exists, which serves storage/app/public straight off the web root and "
+            'public/storage exists, which serves storage/app/public straight off the web root and '
             ."bypasses TenantFileController's membership check — a company's payslips become readable by "
             .'anyone who knows a path. Remove it (rm -rf public/storage); this application serves uploads '
             .'through the streaming route and does not need storage:link.'

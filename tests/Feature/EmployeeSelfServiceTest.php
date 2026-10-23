@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Core\Models\User;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Employees\Models\EmployeeChangeRequest;
-use App\Modules\Core\Models\User;
 use Tests\AccountingTestCase;
 
 class EmployeeSelfServiceTest extends AccountingTestCase

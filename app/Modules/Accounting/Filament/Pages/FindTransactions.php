@@ -10,7 +10,6 @@ use App\Modules\Accounting\Models\JournalEntryLine;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\Summarizers\Sum;

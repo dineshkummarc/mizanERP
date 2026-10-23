@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Payroll\Filament\Resources\AnnualTaxes\Pages\CreateAnnualTax;
+use App\Modules\Core\Models\User;
 use App\Modules\Employees\Filament\Resources\EmployeeSettings\Pages\CreateEmployeeSetting;
+use App\Modules\Employees\Models\Employee;
+use App\Modules\Payroll\Filament\Resources\AnnualTaxes\Pages\CreateAnnualTax;
 use App\Modules\Payroll\Filament\Resources\Payslips\Pages\CreatePayslip;
 use App\Modules\Projects\Filament\Resources\Projects\Pages\CreateProject;
-use App\Modules\Employees\Models\Employee;
-use App\Modules\Core\Models\User;
 use App\Support\EmployeeOptions;
 use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\Gate;

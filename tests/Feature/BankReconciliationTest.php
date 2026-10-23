@@ -7,19 +7,24 @@ use App\Modules\Accounting\Models\BankStatement;
 use App\Modules\Accounting\Models\BankStatementLine;
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Models\JournalEntryLine;
-use App\Modules\Core\Models\User;
 use App\Modules\Accounting\Services\BankReconciliationService;
 use App\Modules\Accounting\Services\JournalEntryService;
+use App\Modules\Core\Models\User;
 use InvalidArgumentException;
 use Tests\AccountingTestCase;
 
 class BankReconciliationTest extends AccountingTestCase
 {
     private BankReconciliationService $service;
+
     private JournalEntryService $entries;
+
     private Account $cash;
+
     private Account $revenue;
+
     private Account $expense;
+
     private User $approver;
 
     protected function setUp(): void

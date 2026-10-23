@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Modules\Accounting\Models\Account;
-use App\Modules\Core\Models\Bank;
 use App\Modules\Accounting\Models\Currency;
 use App\Modules\Accounting\Models\TransactionType;
+use App\Modules\Core\Models\Bank;
 use App\Modules\Core\Models\Company;
 use App\Modules\Core\Models\FiscalYear;
 use App\Modules\PersonalFinance\Models\TaxSchedule;

@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Core\Models\User;
 use App\Modules\Projects\Filament\Resources\Projects\Pages\CreateProject;
 use App\Modules\Projects\Filament\Resources\Projects\Pages\EditProject;
 use App\Modules\Projects\Models\Project;
 use App\Modules\Projects\Models\ProjectEnvironment;
-use App\Modules\Core\Models\User;
 use App\Modules\Projects\Policies\ProjectPolicy;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Database\UniqueConstraintViolationException;

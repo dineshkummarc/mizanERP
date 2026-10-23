@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Modules\Core\Models\Bank;
 use App\Modules\Accounting\Models\Beneficiary;
 use App\Modules\Accounting\Models\TransactionType;
+use App\Modules\Core\Models\Bank;
 use Illuminate\Database\Seeder;
 
 class BeneficiarySeeder extends Seeder

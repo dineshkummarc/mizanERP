@@ -63,7 +63,7 @@ final class HelpAction
     {
         $source = file_get_contents(resource_path("markdown/help/{$slug}.md"));
 
-        return Str::markdown(static::trimRoleTable(static::filterSections($source)['markdown']));
+        return Str::markdown(self::trimRoleTable(self::filterSections($source)['markdown']));
     }
 
     /**
@@ -95,8 +95,8 @@ final class HelpAction
 
         foreach ($lines as $line) {
             if (str_starts_with($line, '## ')) {
-                $required = static::requirementIn($line);
-                $dropping = $required !== [] && ! static::holdsAny($user, $required);
+                $required = self::requirementIn($line);
+                $dropping = $required !== [] && ! self::holdsAny($user, $required);
 
                 if ($dropping) {
                     $hidden++;
@@ -169,7 +169,7 @@ final class HelpAction
      */
     public static function accessFor(mixed $livewire): ?array
     {
-        $model = static::modelBehind($livewire);
+        $model = self::modelBehind($livewire);
 
         if ($model === null) {
             return null;

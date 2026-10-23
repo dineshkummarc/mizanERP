@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Invoicing\Filament\Resources\Contacts\Pages\CreateContact;
-use App\Modules\Invoicing\Models\Contact;
 use App\Modules\Core\Models\CustomField;
 use App\Modules\Core\Models\User;
+use App\Modules\Invoicing\Filament\Resources\Contacts\Pages\CreateContact;
+use App\Modules\Invoicing\Models\Contact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;

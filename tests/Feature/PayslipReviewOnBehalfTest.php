@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Core\Models\User;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Employees\Models\EmployeeSetting;
 use App\Modules\Payroll\Models\Payslip;
-use App\Modules\Core\Models\User;
 use App\Support\Impersonation;
 use Tests\AccountingTestCase;
 use Tests\Concerns\InteractsWithTenant;

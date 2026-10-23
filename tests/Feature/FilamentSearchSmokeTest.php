@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Payroll\Filament\Resources\AnnualTaxes\Pages\ListAnnualTaxes;
-use App\Modules\Employees\Filament\Resources\EmployeeSettings\Pages\ListEmployeeSettings;
-use App\Modules\Payroll\Filament\Resources\Payslips\Pages\ListPayslips;
 use App\Modules\Core\Models\User;
+use App\Modules\Employees\Filament\Resources\EmployeeSettings\Pages\ListEmployeeSettings;
+use App\Modules\Payroll\Filament\Resources\AnnualTaxes\Pages\ListAnnualTaxes;
+use App\Modules\Payroll\Filament\Resources\Payslips\Pages\ListPayslips;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;

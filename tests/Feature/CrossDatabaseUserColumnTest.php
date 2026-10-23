@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Employees\Filament\Resources\Employees\Pages\ListEmployees;
 use App\Modules\Core\Models\Company;
 use App\Modules\Core\Models\User;
+use App\Modules\Employees\Filament\Resources\Employees\Pages\ListEmployees;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;

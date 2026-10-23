@@ -21,7 +21,6 @@ use UnitEnum;
 class MPRResource extends Resource
 {
     use BelongsToModule;
-
     use ScopesToAccessibleEmployees;
 
     protected static ?string $model = MPR::class;

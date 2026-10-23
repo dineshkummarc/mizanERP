@@ -64,7 +64,7 @@ return new class extends Migration
                 'draft', 'submitted', 'priced', 'approved_in_principle', 'approved', 'rejected', 'incorporated',
             ])->default('draft');
 
-            $table->decimal('quoted_amount', 15, 2)->nullable()->comment("What the contractor asked");
+            $table->decimal('quoted_amount', 15, 2)->nullable()->comment('What the contractor asked');
             $table->decimal('assessed_amount', 15, 2)->nullable()->comment('What the certifier decided');
             $table->decimal('approved_amount', 15, 2)->nullable()->comment('What the parties agreed');
 

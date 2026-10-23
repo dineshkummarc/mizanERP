@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Accounting\Models\Account;
 use App\Modules\Invoicing\Filament\Pages\AgedPayables;
 use App\Modules\Invoicing\Filament\Pages\AgedReceivables;
 use App\Modules\Invoicing\Models\Contact;
 use App\Modules\Invoicing\Models\Invoice;
 use App\Modules\Invoicing\Services\InvoiceService;
-use App\Modules\Accounting\Models\Account;
 use Livewire\Livewire;
 use Tests\AccountingTestCase;
 use Tests\Concerns\InteractsWithTenant;

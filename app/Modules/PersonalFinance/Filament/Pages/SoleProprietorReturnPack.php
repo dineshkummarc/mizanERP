@@ -3,6 +3,7 @@
 namespace App\Modules\PersonalFinance\Filament\Pages;
 
 use App\Filament\Concerns\BelongsToModule;
+use App\Filament\Support\HelpAction;
 use App\Modules\Core\Models\Company;
 use App\Modules\Core\Models\FiscalYear;
 use App\Modules\PersonalFinance\Services\SoleProprietorReturnPack as PackService;
@@ -140,6 +141,7 @@ class SoleProprietorReturnPack extends Page
     protected function getHeaderActions(): array
     {
         return [
+            HelpAction::make('sole-proprietor-return-pack', 'Sole Proprietor and AOP Return Pack: Help'),
             Action::make('save')
                 ->label('Save worksheet')
                 ->icon('heroicon-o-check')

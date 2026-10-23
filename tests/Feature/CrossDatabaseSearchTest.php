@@ -2,15 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Payroll\Filament\Resources\AnnualTaxes\Pages\ListAnnualTaxes;
+use App\Modules\Core\Models\FiscalYear;
+use App\Modules\Core\Models\User;
 use App\Modules\Employees\Filament\Resources\EmployeeSettings\Pages\ListEmployeeSettings;
-use App\Modules\Payroll\Filament\Resources\Payslips\Pages\ListPayslips;
-use App\Modules\Payroll\Models\AnnualTax;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Employees\Models\EmployeeSetting;
-use App\Modules\Core\Models\FiscalYear;
+use App\Modules\Payroll\Filament\Resources\AnnualTaxes\Pages\ListAnnualTaxes;
+use App\Modules\Payroll\Filament\Resources\Payslips\Pages\ListPayslips;
+use App\Modules\Payroll\Models\AnnualTax;
 use App\Modules\Payroll\Models\Payslip;
-use App\Modules\Core\Models\User;
 use App\Support\LandlordUserColumn;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;

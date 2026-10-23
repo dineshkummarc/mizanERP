@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Projects\Models\ProjectEnvironment;
 use App\Modules\Core\Models\User;
+use App\Modules\Projects\Models\ProjectEnvironment;
 use App\Modules\Projects\Notifications\CertificateExpiring;
 use App\Modules\Projects\Services\EnvironmentCertificateChecker;
 use App\Modules\Projects\Services\EnvironmentIncidentManager;

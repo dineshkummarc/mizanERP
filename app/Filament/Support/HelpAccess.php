@@ -74,12 +74,12 @@ final class HelpAccess
             return $summary;
         }
 
-        $summary['role'] = static::roleNameFor($user);
+        $summary['role'] = self::roleNameFor($user);
 
-        $adminOnly = static::adminOnlyAbilitiesFor($model);
+        $adminOnly = self::adminOnlyAbilitiesFor($model);
 
-        foreach (static::abilitiesFor($model) as $ability => $permissions) {
-            $verb = static::VERBS[$ability] ?? Str::lower(Str::headline($ability));
+        foreach (self::abilitiesFor($model) as $ability => $permissions) {
+            $verb = self::VERBS[$ability] ?? Str::lower(Str::headline($ability));
 
             // Some policies gate on the Administrator role rather than on a
             // permission — EmployeePolicy and EmailTemplatePolicy both do — so
@@ -90,7 +90,7 @@ final class HelpAccess
                     continue;
                 }
 
-                if (static::isAdministrator($user)) {
+                if (self::isAdministrator($user)) {
                     $summary['can'][] = $verb;
                 } else {
                     $summary['cannot'][] = ['verb' => $verb, 'who' => ['Administrator']];
@@ -100,7 +100,7 @@ final class HelpAccess
             }
 
             $holdsAll = collect($permissions)
-                ->every(fn (string $permission) => static::holds($user, $permission));
+                ->every(fn (string $permission) => self::holds($user, $permission));
 
             if ($holdsAll) {
                 $summary['can'][] = $verb;
@@ -110,11 +110,11 @@ final class HelpAccess
 
             $summary['cannot'][] = [
                 'verb' => $verb,
-                'who' => static::rolesHolding($permissions),
+                'who' => self::rolesHolding($permissions),
             ];
         }
 
-        $summary['cannot'] = static::groupByWho($summary['cannot']);
+        $summary['cannot'] = self::groupByWho($summary['cannot']);
 
         return $summary;
     }
@@ -258,7 +258,7 @@ final class HelpAccess
         // Same reasoning as HelpAction::holdsAny(): hasPermissionTo() does not
         // go through the Gate, so a super admin holding no role in the company
         // they are currently in would otherwise be told they can do nothing.
-        if (static::isAdministrator($user)) {
+        if (self::isAdministrator($user)) {
             return true;
         }
 

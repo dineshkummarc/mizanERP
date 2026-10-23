@@ -3,6 +3,7 @@
 namespace App\Modules\PersonalFinance\Filament\Pages;
 
 use App\Filament\Concerns\BelongsToModule;
+use App\Filament\Support\HelpAction;
 use App\Modules\Core\Models\Company;
 use App\Modules\Core\Models\FiscalYear;
 use App\Modules\PersonalFinance\Models\PersonalTaxProfile;
@@ -82,6 +83,7 @@ class ReturnPack extends Page
     protected function getHeaderActions(): array
     {
         return [
+            HelpAction::make('return-pack', 'Return Pack: Help'),
             Action::make('download')
                 ->label('Download PDF')
                 ->icon('heroicon-o-arrow-down-tray')
