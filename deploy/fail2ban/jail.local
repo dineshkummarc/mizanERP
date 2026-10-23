@@ -1,0 +1,33 @@
+# fail2ban for the SSH port — the copy of /etc/fail2ban/jail.local on the VPS, set up 2026-10-23.
+#
+# Why: sshd logged ~400 failed logins an hour from password-guessing bots. With MaxStartups at its
+# default of 10, the queue of unauthenticated connections fills and sshd resets real logins at random
+# ("kex_exchange_identification: Connection reset by peer"), which is how a deploy failed and this was
+# noticed. Banning an address after five failures in ten minutes keeps the queue clear.
+#
+# Install on AlmaLinux / EL9 (EPEL):
+#   dnf install -y fail2ban fail2ban-firewalld fail2ban-systemd
+#   cp deploy/fail2ban/jail.local /etc/fail2ban/jail.local   # then add the addresses you log in from
+#   systemctl enable --now fail2ban
+#   fail2ban-client status sshd
+#
+# fail2ban-firewalld makes bans firewalld rich rules (jail.d/00-firewalld.conf); fail2ban-systemd reads
+# the journal, where sshd logs on EL9 (jail.d/00-systemd.conf).
+
+[DEFAULT]
+# Never ban the addresses the team logs in from. The server copy lists them; this file does not, because
+# the repository is public. Add a new office or VPN address on the server before relying on it.
+ignoreip = 127.0.0.1/8 ::1
+
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+# Repeat offenders stay out longer each time, up to a day.
+bantime.increment = true
+bantime.maxtime   = 1d
+
+# Stated here as well as by fail2ban-systemd, so it survives that package.
+backend = systemd
+
+[sshd]
+enabled = true
