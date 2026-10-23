@@ -3,6 +3,7 @@
 namespace App\Modules\Lifecycle\Services;
 
 use App\Modules\Lifecycle\Models\EmployeeDocument;
+use App\Support\ExpiryThreshold;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -39,29 +40,10 @@ class DocumentExpiryCheck
                     return null;
                 }
 
-                // The tightest threshold this document has now crossed. Expired
-                // documents fall through to the smallest one and keep being reported
-                // until somebody deals with them — an expired visa is not a warning
-                // that stops being true.
-                $crossed = null;
+                // The once-per-threshold rule, shared with contact documents — App\Support\ExpiryThreshold.
+                $crossed = ExpiryThreshold::newlyCrossed($days, $thresholds, $document->expiry_notified_at_days);
 
-                foreach ($thresholds as $threshold) {
-                    if ($days <= $threshold) {
-                        $crossed = $threshold;
-                    }
-                }
-
-                if ($crossed === null) {
-                    return null;
-                }
-
-                // Already warned at this threshold or a tighter one: silent.
-                if ($document->expiry_notified_at_days !== null
-                    && $document->expiry_notified_at_days <= $crossed) {
-                    return null;
-                }
-
-                return ['document' => $document, 'days' => $days, 'threshold' => $crossed];
+                return $crossed === null ? null : ['document' => $document, 'days' => $days, 'threshold' => $crossed];
             })
             ->filter()
             ->values();

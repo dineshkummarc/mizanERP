@@ -7,6 +7,7 @@ use App\Models\TenantModel as Model;
 use App\Modules\Core\Models\Bank;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Contact extends Model
 {
@@ -97,6 +98,12 @@ class Contact extends Model
         $primary = $this->people()->where('is_primary', true)->value('email');
 
         return $primary ?: $this->email;
+    }
+
+    /** Contracts and documents kept on the contact — docs/bexio-gap-plan.md §3.7. */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(ContactDocument::class);
     }
 
     public function invoices()

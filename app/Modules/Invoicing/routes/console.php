@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Invoicing\Console\Commands\CheckContactDocumentExpiry;
 use App\Modules\Invoicing\Console\Commands\RaiseRecurringInvoices;
 use App\Modules\Invoicing\Console\Commands\SendCustomerStatements;
 use App\Modules\Invoicing\Console\Commands\SendOverdueReminders;
@@ -36,4 +37,10 @@ Schedule::command(SendOverdueReminders::class)
 // recorded. Off until Settings → Customer statements turns it on — the command says so and exits.
 Schedule::command(SendCustomerStatements::class)
     ->monthlyOn(2, '09:00')
+    ->withoutOverlapping();
+
+// A contract or document on a contact about to lapse — docs/bexio-gap-plan.md §3.7. Once per threshold
+// crossed, never once per day, the rule Lifecycle's employee-document check set.
+Schedule::command(CheckContactDocumentExpiry::class)
+    ->dailyAt('07:45')
     ->withoutOverlapping();

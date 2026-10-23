@@ -6,6 +6,7 @@ use App\Filament\Concerns\BelongsToModule;
 use App\Modules\Invoicing\Filament\Resources\Contacts\Pages\CreateContact;
 use App\Modules\Invoicing\Filament\Resources\Contacts\Pages\EditContact;
 use App\Modules\Invoicing\Filament\Resources\Contacts\Pages\ListContacts;
+use App\Modules\Invoicing\Filament\Resources\Contacts\RelationManagers\DocumentsRelationManager;
 use App\Modules\Invoicing\Filament\Resources\Contacts\RelationManagers\InvoicesRelationManager;
 use App\Modules\Invoicing\Filament\Resources\Contacts\RelationManagers\PeopleRelationManager;
 use App\Modules\Invoicing\Filament\Resources\Contacts\Schemas\ContactForm;
@@ -50,6 +51,7 @@ class ContactResource extends Resource
     {
         return [
             PeopleRelationManager::class,
+            DocumentsRelationManager::class,
             InvoicesRelationManager::class,
             // Quotes, calls and next actions — offered by Quotations and CRM from their own providers,
             // because this module may not name either (docs/bexio-gap-plan.md Phase 2, item 4).

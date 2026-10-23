@@ -3,6 +3,7 @@
 namespace App\Modules\Invoicing;
 
 use App\Modules\Accounting\Filament\Resources\BankStatementLines\BankStatementLineResource;
+use App\Modules\Invoicing\Console\Commands\CheckContactDocumentExpiry;
 use App\Modules\Invoicing\Console\Commands\RaiseRecurringInvoices;
 use App\Modules\Invoicing\Console\Commands\SendCustomerStatements;
 use App\Modules\Invoicing\Console\Commands\SendOverdueReminders;
@@ -19,9 +20,11 @@ use App\Modules\Invoicing\Filament\Settings\DunningSettingsSection;
 use App\Modules\Invoicing\Filament\Settings\StatementSettingsSection;
 use App\Modules\Invoicing\Filament\Support\RecordReceiptFromStatementLine;
 use App\Modules\Invoicing\Models\Contact;
+use App\Modules\Invoicing\Models\ContactDocument;
 use App\Modules\Invoicing\Models\Invoice;
 use App\Modules\Invoicing\Models\InvoiceLine;
 use App\Modules\Invoicing\Models\TaxRate;
+use App\Modules\Invoicing\Policies\ContactDocumentPolicy;
 use App\Modules\Invoicing\Policies\ContactPolicy;
 use App\Modules\Invoicing\Policies\InvoiceLinePolicy;
 use App\Modules\Invoicing\Policies\InvoicePolicy;
@@ -64,6 +67,7 @@ class InvoicingServiceProvider extends ServiceProvider
     /** @var array<class-string, class-string> */
     private const POLICIES = [
         Contact::class => ContactPolicy::class,
+        ContactDocument::class => ContactDocumentPolicy::class,
         InvoiceLine::class => InvoiceLinePolicy::class,
         Invoice::class => InvoicePolicy::class,
         TaxRate::class => TaxRatePolicy::class,
@@ -205,7 +209,7 @@ class InvoicingServiceProvider extends ServiceProvider
          */
         CsvImporters::register('opening_invoices', OpeningInvoiceCsvImporter::class, 45);
 
-        $this->commands([RaiseRecurringInvoices::class, SendOverdueReminders::class, SendCustomerStatements::class]);
+        $this->commands([RaiseRecurringInvoices::class, SendOverdueReminders::class, SendCustomerStatements::class, CheckContactDocumentExpiry::class]);
 
         // An invoice's journal entry is the accounting half of the invoice, so the register must refuse
         // to edit it. Registered from here rather than named in Accounting: that naming was an

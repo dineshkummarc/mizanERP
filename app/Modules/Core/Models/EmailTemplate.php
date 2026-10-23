@@ -67,6 +67,9 @@ class EmailTemplate extends Model
         'company_invitation' => ['name', 'company', 'roles', 'inviter'],
         // A certificate emailed to the person it is about, attached — Phase 5, item 18.
         'document_issued' => ['employee_name', 'document', 'company'],
+        // A contact's contract or document about to lapse, to whoever manages contacts — §3.7. Once per
+        // threshold crossed, never once per day.
+        'contact_document_expiring' => ['employee_name', 'contact_name', 'document', 'expires_on', 'company'],
     ];
 
     protected $fillable = ['key', 'subject', 'greeting', 'body', 'action_label', 'closing', 'is_active'];

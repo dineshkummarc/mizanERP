@@ -50,6 +50,21 @@ Correspondence follows the main contact: if one is set, that person's email is
 where documents notionally go; otherwise it falls back to the contact's own
 **Email** field.
 
+## Documents <!-- requires: ContactUpdate -->
+
+The **Documents** tab keeps the contracts and papers that belong to this
+contact — the signed supply agreement, an NDA, a supplier's trade licence or
+tax registration certificate — so they are found on the contact rather than
+by asking who has the email. Each has a kind, a title in your words, an
+optional reference number, when it was signed or issued, when it expires, and
+the file itself (image or PDF, up to 8 MB).
+
+Give a document an **expiry** and it is watched: the row turns amber inside
+60 days and red once it has lapsed, and whoever can edit contacts is told
+**once** at 60, 30 and 7 days, then once more when it expires — never every
+day. Changing the expiry when a contract is renewed starts the warnings
+again. Leave the expiry blank for a document that never lapses.
+
 ## Deleting a contact <!-- requires: ContactDelete -->
 
 Only possible while the contact has never been invoiced. Once at least one

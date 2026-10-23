@@ -6,7 +6,8 @@
 run and the baseline rows seeded (2310 Expense Reimbursements Payable, the `supplier-bill` transaction
 type). What each item turned out to be is under §3.1 to §3.5. §3.6 (a claim paid by bank transfer)
 was built afterwards and deployed on 2026-10-23 as `f0daf517`, with the `expense-reimbursement`
-transaction type seeded into every tenant. What stays unbuilt is listed under "Not planned, and
+transaction type seeded into every tenant. §3.7 (contracts and documents on the contact) was built
+and deployed on 2026-10-23. What stays unbuilt is listed under "Not planned, and
 why" at the end of §3.
 **Source read:** the bexio feature pages at `bexio.com/en-CH` — `functions`, `contact-management`,
 `sales-process-and-expense-management`, `expense-management`, `accounting`, `payroll-accounting`,
@@ -430,6 +431,31 @@ Not built: paying part of a claim (a claim is one amount, paid whole) and withho
 (a reimbursement is not a payment for services).
 
 Tests: `ExpenseClaimBankPaymentTest` (8).
+
+#### 3.7 Contracts and documents on the contact (built and deployed 2026-10-23)
+
+The Contacts table's last **Missing** row with no phase against it. `contact_documents` is
+`employee_documents`' shape on the customer and the supplier — a kind, a title and reference number, a
+term, the file, notes — and the **Documents** tab on the contact screen files, opens, replaces and
+removes them. Invoicing owns it outright, so nothing is contributed from another module.
+
+- **The expiry is watched the same way.** `invoicing:check-contact-documents` runs daily and warns
+  whoever may edit contacts once per threshold crossed (60, 30, 7 days, in `config/invoicing.php`),
+  never once per day; an expired document keeps being reported until somebody deals with it. The
+  once-per-threshold rule is now one function, `App\Support\ExpiryThreshold`, and Lifecycle's
+  `DocumentExpiryCheck` reads it too; the four expiry answers (`daysUntilExpiry()` and company) are one
+  trait, `App\Models\Concerns\ExpiresOn`, shared with `EmployeeDocument`. Renewing — changing the
+  expiry — resets the warning on the model itself, so no screen can forget.
+- **Who is told.** Holders of `ContactUpdate`, as Lifecycle tells holders of `EmployeeDocumentUpdate`.
+  The contact's owner would be the better reader, but the owner is an employee and Invoicing may not
+  name Employees. The mail has its own `EmailTemplate` key, `contact_document_expiring`.
+- **No permission group of its own.** Whoever may read the contact may read its documents; whoever may
+  edit it may file them. A customer's contract is the credit limit's sensitivity, not a passport scan's.
+
+Not built: a Documents Expiring report across contacts (the tab colours each row and the mail does the
+rest), and documents on a lead before it becomes a contact.
+
+Tests: `ContactDocumentsTest` (6).
 
 ### Not planned, and why
 

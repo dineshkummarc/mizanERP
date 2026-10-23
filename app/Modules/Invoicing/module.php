@@ -17,6 +17,7 @@ return [
 
     'models' => [
         'App\\Models\\Contact' => \App\Modules\Invoicing\Models\Contact::class,
+        'App\\Models\\ContactDocument' => \App\Modules\Invoicing\Models\ContactDocument::class,
         'App\\Models\\Invoice' => \App\Modules\Invoicing\Models\Invoice::class,
         'App\\Models\\InvoiceLine' => \App\Modules\Invoicing\Models\InvoiceLine::class,
         'App\\Models\\TaxRate' => \App\Modules\Invoicing\Models\TaxRate::class,

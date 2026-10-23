@@ -36,6 +36,7 @@
         "App\\Models\\ComplianceRequirement": "App\\Modules\\ConstructionContracts\\Models\\ComplianceRequirement",
         "App\\Models\\Consent": "App\\Modules\\Campaigns\\Models\\Consent",
         "App\\Models\\Contact": "App\\Modules\\Invoicing\\Models\\Contact",
+        "App\\Models\\ContactDocument": "App\\Modules\\Invoicing\\Models\\ContactDocument",
         "App\\Models\\ContactPerson": "App\\Modules\\Invoicing\\Models\\ContactPerson",
         "App\\Models\\Contract": "App\\Modules\\ConstructionContracts\\Models\\Contract",
         "App\\Models\\ContractItem": "App\\Modules\\ConstructionContracts\\Models\\ContractItem",

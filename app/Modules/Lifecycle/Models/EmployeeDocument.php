@@ -2,13 +2,12 @@
 
 namespace App\Modules\Lifecycle\Models;
 
+use App\Models\Concerns\ExpiresOn;
 use App\Models\Concerns\StoresPlainDates;
 use App\Models\TenantModel as Model;
 use App\Modules\Employees\Models\Employee;
 use App\Traits\Auditable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * A document with an expiry date.
@@ -21,6 +20,9 @@ use Illuminate\Support\Carbon;
 class EmployeeDocument extends Model
 {
     use Auditable;
+
+    // The expiry answers — docs/bexio-gap-plan.md §3.7 lifted them out so contact documents share them.
+    use ExpiresOn;
     use StoresPlainDates;
 
     protected array $plainDates = ['issued_on', 'expires_on'];
@@ -58,41 +60,5 @@ class EmployeeDocument extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
-    }
-
-    /** Documents that expire at all: many — a degree, a CNIC copy — never do. */
-    public function scopeExpiring(Builder $query): Builder
-    {
-        return $query->whereNotNull('expires_on');
-    }
-
-    public function scopeExpiredBy(Builder $query, string|Carbon $date): Builder
-    {
-        return $query->expiring()->whereDate('expires_on', '<', Carbon::parse($date)->toDateString());
-    }
-
-    /**
-     * Days until it lapses; negative once it has. Null when it never expires.
-     *
-     * Signed rather than clamped: "expired 40 days ago" is a different problem from
-     * "expires in 40 days", and a caller that only knew the magnitude would treat them
-     * the same.
-     */
-    public function daysUntilExpiry(string|Carbon|null $asOf = null): ?int
-    {
-        if (! $this->expires_on) {
-            return null;
-        }
-
-        $asOf = $asOf ? Carbon::parse($asOf) : now();
-
-        return (int) $asOf->startOfDay()->diffInDays($this->expires_on->copy()->startOfDay(), false);
-    }
-
-    public function hasExpired(string|Carbon|null $asOf = null): bool
-    {
-        $days = $this->daysUntilExpiry($asOf);
-
-        return $days !== null && $days < 0;
     }
 }
