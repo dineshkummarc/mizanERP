@@ -2,6 +2,10 @@
 
 namespace App\Modules\Core\Filament\Widgets;
 
+use App\Filament\Concerns\WidgetBelongsToModule;
+use App\Modules\Core\Models\Company;
+use App\Support\Modules;
+use App\Support\Reporting\DashboardWidgets;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Carbon;
@@ -28,16 +32,33 @@ use Spatie\Health\ResultStores\StoredCheckResults\StoredCheckResult;
  */
 class HealthOverview extends StatsOverviewWidget
 {
-    // First on the page for the one person who sees it: ops before figures.
-    protected static ?int $sort = -100;
+    use WidgetBelongsToModule;
 
-    protected static bool $isLazy = false;
+    // In the headline band, right after the company's figures, for the one person who sees it. DashboardWidgetRulesTest
+    // keeps every sort inside a band and no two the same, so "first at any cost" (-100) is not available.
+    protected static ?int $sort = DashboardWidgets::HEADLINE + 1;
+
+    // Lazy like every widget — the dashboard renders and the tile fills in (the rules test's "without exception").
+    protected static bool $isLazy = true;
 
     protected ?string $pollingInterval = null;
 
     public static function canView(): bool
     {
-        return (bool) auth()->user()?->isSuperAdmin();
+        if (! auth()->user()?->isSuperAdmin() || ! static::moduleIsAvailable()) {
+            return false;
+        }
+
+        // Core is locked on, so the trait's gate alone cannot hide this tile. With no other module switched on
+        // the company has no dashboard beneath it, and the ops tile goes with it — the rule every widget obeys
+        // (DashboardWidgetRulesTest). The companies asked are the ones Modules itself would ask — the panel's
+        // tenant, else the user's memberships — and none at all means nothing to check, as Modules decides.
+        $companyIds = modules()->companyIdsFor(auth()->user());
+
+        return $companyIds === [] || collect($companyIds)->contains(
+            fn (int|string $companyId): bool => collect(modules()->stateFor($companyId))
+                ->contains(fn (array $state, string $module): bool => ! Modules::isLocked($module) && ! empty($state['enabled'])),
+        );
     }
 
     protected function getStats(): array

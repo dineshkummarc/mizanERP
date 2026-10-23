@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Core\Models\User;
 use App\Modules\Payroll\Filament\Widgets\SalaryTaxCalculator;
 use App\Modules\Payroll\Models\SalarySlab;
 use App\Modules\Payroll\Services\TaxCalculatorService;
@@ -15,6 +16,14 @@ use Tests\AccountingTestCase;
  */
 class SalaryTaxCalculatorWidgetTest extends AccountingTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // A member of staff: the widget is gated on PayslipView, which every role starts with.
+        $this->actingAs($this->makeUser('Employee', 'staff@test.local'));
+    }
+
     public function test_it_answers_with_the_payslip_calculators_own_figures(): void
     {
         $component = Livewire::test(SalaryTaxCalculator::class)
@@ -52,11 +61,14 @@ class SalaryTaxCalculatorWidgetTest extends AccountingTestCase
         $this->assertTrue($widget->compute()['no_slabs']);
     }
 
-    public function test_every_signed_in_user_may_see_it(): void
+    public function test_every_member_of_staff_may_see_it(): void
     {
-        // No permission gate on purpose: it reads public law and the viewer's own
-        // typing, nothing of anyone else's pay. The module-off case is
-        // WidgetBelongsToModule's, covered where every widget's gating is.
+        // Gated on PayslipView, which every role starts with — so an employee sees it, and only a user
+        // holding nothing at all does not (the rule every widget obeys, DashboardWidgetRulesTest). The
+        // module-off case is WidgetBelongsToModule's, covered where every widget's gating is.
         $this->assertTrue(SalaryTaxCalculator::canView());
+
+        $this->actingAs(User::factory()->create(['status' => 1]));
+        $this->assertFalse(SalaryTaxCalculator::canView());
     }
 }

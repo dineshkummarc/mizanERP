@@ -74,6 +74,7 @@ use App\Modules\Accounting\Support\FixedAssetReports;
 use App\Modules\Accounting\Support\LoanReports;
 use App\Modules\Accounting\Support\OpeningBalanceCsvImporter;
 use App\Modules\Accounting\Support\ReportPane;
+use App\Modules\Accounting\Support\ReturnPackReports;
 use App\Modules\Accounting\Support\WithholdingReports;
 use App\Modules\Core\Models\Bank;
 use App\Modules\Employees\Models\Employee;
@@ -144,6 +145,8 @@ class AccountingServiceProvider extends ServiceProvider
         // (ReportsHubTest pins it), while this page is Accounting's own and must not keep
         // the section alive for a company that never bought payroll.
         ReportCatalogue::register('Financial statements', \App\Modules\Accounting\Filament\Pages\CorporateReturnPack::class, 'The year\'s corporate return figures: profit, tax adjustments, minimum tax, and the balance to pay.');
+        // Drawn in the pane as the statement half of the page — ReturnPackReports says why it was missing.
+        ReportRenderers::register('CorporateReturnPack', fn (string $asOf): array => app(ReturnPackReports::class)->corporate($asOf));
         ReportCatalogue::register('Financial statements', GeneralLedger::class, 'Every account, every entry against it, opening to closing — what an audit reads.');
         ReportCatalogue::register('Financial statements', BudgetVsActual::class, 'What was planned against what was spent, by account and by month.');
         ReportCatalogue::register('Receivables & payables', ContractorPayments::class, 'What each contractor has been paid, and over what period.');

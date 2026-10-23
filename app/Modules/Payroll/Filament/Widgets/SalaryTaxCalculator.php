@@ -15,8 +15,8 @@ use Filament\Widgets\Widget;
  * The same question the salary-calculator pages of the tax-filing services
  * answer, computed by the same TaxCalculatorService that computes the payslips —
  * so the number an employee sees here is the number payroll will deduct, not a
- * near-miss from a second implementation. Deliberately visible to every signed-in
- * user of a company with payroll, employees included: the slabs are public law,
+ * near-miss from a second implementation. Visible to every member of staff of a
+ * company with payroll — PayslipView, which every role holds: the slabs are public law,
  * the input is whatever the viewer types, and nothing of anyone else's pay is
  * read or shown.
  *
@@ -30,8 +30,8 @@ class SalaryTaxCalculator extends Widget
 
     protected string $view = 'filament.widgets.salary-tax-calculator';
 
-    /** Instant arithmetic — nothing to defer, nothing to poll. */
-    protected static bool $isLazy = false;
+    /** Lazy like every widget, instant as the arithmetic is: the dashboard renders first and this fills in. */
+    protected static bool $isLazy = true;
 
     protected ?string $pollingInterval = null;
 
@@ -42,7 +42,10 @@ class SalaryTaxCalculator extends Widget
 
     public static function canView(): bool
     {
-        return static::moduleIsAvailable();
+        // PayslipView is the permission every role starts with (Payroll's role_grants), so this is still every
+        // member of staff — while a user holding nothing at all sees nothing, which is the rule every widget
+        // obeys (DashboardWidgetRulesTest).
+        return static::moduleIsAvailable() && (auth()->user()?->can('PayslipView') ?? false);
     }
 
     /**
