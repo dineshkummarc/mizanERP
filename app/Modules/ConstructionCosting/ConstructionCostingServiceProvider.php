@@ -81,6 +81,5 @@ class ConstructionCostingServiceProvider extends ServiceProvider
         // command nobody registered cannot be run by hand — which is the first thing anybody wants to do with it.
         $this->commands([Reconcile::class]);
 
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
     }
 }

@@ -34,6 +34,5 @@ class MprServiceProvider extends ServiceProvider
         }
 
         $this->loadRoutesFrom(__DIR__.'/routes/api.php');
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
     }
 }

@@ -76,7 +76,6 @@ class CrmServiceProvider extends ServiceProvider
         // The public lead-capture endpoint. Outside the panel, so the panel's tenancy
         // middleware never runs for it — see ResolveLeadCaptureTenant.
         $this->loadRoutesFrom(__DIR__.'/routes/web.php');
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
 
         // Laravel only auto-discovers commands in app/Console/Commands; a module's has to be named
         // here or it disappears from artisan and, silently, from the scheduler.

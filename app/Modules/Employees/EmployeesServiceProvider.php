@@ -61,7 +61,6 @@ class EmployeesServiceProvider extends ServiceProvider
         }
 
         $this->loadRoutesFrom(__DIR__.'/routes/api.php');
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
 
         // Laravel auto-discovers commands only in app/Console/Commands, so one
         // living in a module has to be registered here or it exists and cannot

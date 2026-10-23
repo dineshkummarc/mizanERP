@@ -35,7 +35,6 @@ class QuotationsServiceProvider extends ServiceProvider
         }
 
         $this->loadRoutesFrom(__DIR__.'/routes/web.php');
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
 
         // Laravel only auto-discovers commands in app/Console/Commands, so a command in a
         // module has to be registered here or it disappears from artisan — and from the

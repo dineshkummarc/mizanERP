@@ -44,7 +44,6 @@ class LeaveServiceProvider extends ServiceProvider
         }
 
         $this->loadRoutesFrom(__DIR__.'/routes/api.php');
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
 
         // Laravel only auto-discovers commands in app/Console/Commands, so a command
         // living in a module has to be registered here or it disappears from artisan

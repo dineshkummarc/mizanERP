@@ -114,7 +114,6 @@ class CoreServiceProvider extends ServiceProvider
         // failed night.
         $this->commands([DeliverScheduledReports::class]);
 
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
     }
 
     /**

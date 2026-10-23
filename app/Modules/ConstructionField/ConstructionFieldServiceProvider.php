@@ -50,6 +50,5 @@ class ConstructionFieldServiceProvider extends ServiceProvider
         // command nobody can invoke by hand is a command nobody can test or re-run after a failed night.
         $this->commands([CheckDelayNotices::class]);
 
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
     }
 }

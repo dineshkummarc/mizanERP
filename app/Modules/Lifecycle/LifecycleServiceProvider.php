@@ -50,8 +50,6 @@ class LifecycleServiceProvider extends ServiceProvider
             Gate::policy($model, $policy);
         }
 
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
-
         $this->commands([CheckDocumentExpiry::class]);
 
         $this->registerReports();

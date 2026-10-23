@@ -1,18 +1,32 @@
 <?php
 
 // Scheduled work belongs to the module that owns it, so each module's
-// routes/console.php carries its own entries and its own licence guard:
+// routes/console.php carries its own entries and its own licence guard —
+// app/Modules/Payroll/routes/console.php opens the month, Invoicing raises the
+// recurring invoices, and so on. They are required from this file, just below the
+// imports, for the reason given there.
 //
-//   app/Modules/Mpr/routes/console.php       comparison-export cleanup
-//   app/Modules/Projects/routes/console.php  health, certificates, prune
-//
-// What is left here is what belongs to no module: the installation's own health.
-// It is not licensed, not per-company, and not something a tenant can switch off.
+// What is written here is what belongs to no module: the installation's own health
+// and backups. Not licensed, not per-company, not something a tenant can switch off.
 
 use Illuminate\Support\Facades\Schedule;
 use Spatie\Health\Commands\RunHealthChecksCommand;
 use Spatie\Health\Commands\ScheduleCheckHeartbeatCommand;
 use Spatie\Health\Models\HealthCheckResultHistoryItem;
+
+/*
+ * Each module's own schedule — app/Modules/<Module>/routes/console.php.
+ *
+ * Required from here rather than from the module providers, because a provider's `loadRoutesFrom()`
+ * does nothing once routes are cached, and deploy.sh caches them on every release. Found on
+ * 2026-10-23: production listed the eight entries below and none of the twenty-four the modules
+ * schedule — no job had ever opened a payroll month, raised a recurring invoice or sent a reminder.
+ * This file is loaded by the console kernel's command paths, which `require` regardless of the cache,
+ * so what is scheduled here is scheduled everywhere. ModuleScheduleTest holds the line.
+ */
+foreach (glob(__DIR__.'/../app/Modules/*/routes/console.php') as $moduleSchedule) {
+    require $moduleSchedule;
+}
 
 /**
  * Run every check, every minute.

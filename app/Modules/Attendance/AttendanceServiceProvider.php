@@ -63,8 +63,6 @@ class AttendanceServiceProvider extends ServiceProvider
             Gate::policy($model, $policy);
         }
 
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
-
         $this->commands([AccrueCompensatoryOff::class]);
     }
 

@@ -53,6 +53,5 @@ class ConstructionQhseServiceProvider extends ServiceProvider
         // command nobody can invoke by hand is a command nobody can test or re-run after a failed night.
         $this->commands([CheckCompetencyExpiry::class]);
 
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
     }
 }

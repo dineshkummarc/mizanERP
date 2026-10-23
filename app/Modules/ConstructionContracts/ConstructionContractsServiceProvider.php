@@ -61,7 +61,6 @@ class ConstructionContractsServiceProvider extends ServiceProvider
          * nobody can read.
          */
         $this->commands([CheckComplianceExpiry::class, ReconcileRetention::class]);
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
 
         /*
          * The construction account map, contributed to Core's Company Settings page (§18.2).

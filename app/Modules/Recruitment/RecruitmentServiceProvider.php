@@ -38,7 +38,6 @@ class RecruitmentServiceProvider extends ServiceProvider
             Gate::policy($model, $policy);
         }
 
-        $this->loadRoutesFrom(__DIR__.'/routes/console.php');
     }
 
     /**
