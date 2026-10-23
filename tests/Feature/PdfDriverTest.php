@@ -48,6 +48,31 @@ class PdfDriverTest extends TestCase
         $this->assertSame('dompdf', Pdf::view('pdfs.mpr-report')->driver());
     }
 
+    /** Node on its own is not an engine: a runner with Node and no puppeteer must fall back too. */
+    public function test_auto_falls_back_to_dompdf_when_node_has_no_puppeteer(): void
+    {
+        config(['pdf.driver' => 'auto', 'services.node.binary' => $this->fakeNode(withPuppeteer: false)]);
+
+        $this->assertFalse(NodeRuntime::isAvailable());
+        $this->assertSame('dompdf', Pdf::view('pdfs.mpr-report')->driver());
+
+        config(['services.node.binary' => $this->fakeNode(withPuppeteer: true)]);
+        NodeRuntime::flush();
+
+        $this->assertTrue(NodeRuntime::isAvailable());
+        $this->assertSame('browsershot', Pdf::view('pdfs.mpr-report')->driver());
+    }
+
+    /** A stand-in for node: answers --version, and resolves puppeteer only when told to. */
+    private function fakeNode(bool $withPuppeteer): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'fake-node-');
+        file_put_contents($path, "#!/bin/sh\n".'[ "$1" = "--version" ] && exit 0'."\n".($withPuppeteer ? 'exit 0' : 'exit 1')."\n");
+        chmod($path, 0755);
+
+        return $path;
+    }
+
     public function test_the_node_probe_is_memoised(): void
     {
         config(['services.node.binary' => '/definitely/not/here/node']);
@@ -56,7 +81,7 @@ class PdfDriverTest extends TestCase
 
         // A later config change is not picked up until the cache is flushed —
         // the probe shells out, so it must not run per PDF.
-        config(['services.node.binary' => 'node']);
+        config(['services.node.binary' => $this->fakeNode(withPuppeteer: true)]);
         $this->assertFalse(NodeRuntime::isAvailable());
 
         NodeRuntime::flush();

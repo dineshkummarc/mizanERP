@@ -5,8 +5,13 @@ namespace App\Support\Pdf;
 use Symfony\Component\Process\Process;
 
 /**
- * Detects whether a usable Node binary exists, so PDF rendering can fall back
- * to a pure-PHP engine on servers without Node installed.
+ * Detects whether Node can drive Chrome for PDF rendering — a Node binary that answers, with puppeteer
+ * installed beside this application — so rendering can fall back to a pure-PHP engine where it cannot.
+ *
+ * Node alone is not an engine. Browsershot drives Chrome through puppeteer, which `npm ci` installs into
+ * node_modules; a CI runner or a fresh server has Node and no puppeteer, and before the second probe
+ * "auto" chose an engine that could not render anything. GitHub's ubuntu image was the first to show
+ * it (2026-10-23).
  */
 class NodeRuntime
 {
@@ -41,7 +46,16 @@ class NodeRuntime
             $process->setTimeout(5);
             $process->run();
 
-            return $process->isSuccessful();
+            if (! $process->isSuccessful()) {
+                return false;
+            }
+
+            // From the application root, which is where Browsershot's own script resolves it from too.
+            $resolve = new Process([$binary, '-e', "require.resolve('puppeteer')"], base_path());
+            $resolve->setTimeout(5);
+            $resolve->run();
+
+            return $resolve->isSuccessful();
         } catch (\Throwable) {
             return false;
         }
