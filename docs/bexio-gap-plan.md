@@ -5,7 +5,8 @@
 `13a736de`, phase 5 as `c23cb041`, both live on https://mizan.erbium.tech with every tenant migration
 run and the baseline rows seeded (2310 Expense Reimbursements Payable, the `supplier-bill` transaction
 type). What each item turned out to be is under §3.1 to §3.5. §3.6 (a claim paid by bank transfer)
-was built afterwards and deployed on 2026-10-23. What stays unbuilt is listed under "Not planned, and
+was built afterwards and deployed on 2026-10-23 as `f0daf517`, with the `expense-reimbursement`
+transaction type seeded into every tenant. What stays unbuilt is listed under "Not planned, and
 why" at the end of §3.
 **Source read:** the bexio feature pages at `bexio.com/en-CH` — `functions`, `contact-management`,
 `sales-process-and-expense-management`, `expense-management`, `accounting`, `payroll-accounting`,
@@ -400,7 +401,7 @@ Tests: `EobiReturnPageTest` (4), `CertificateBatchTest` (5), `InsuranceDocumentT
 `PayComponentBasisTest` (3). The reports-hub floor in `ReportPaneTest` rises to 53 with the new
 report.
 
-#### 3.6 Paying a claim by bank transfer (built 2026-10-22, deployed 2026-10-23)
+#### 3.6 Paying a claim by bank transfer (built 2026-10-22, deployed 2026-10-23 as `f0daf517`)
 
 The one thing §3.3 left out, built on the contract §3.3 introduced for bills. `ExpenseClaim`
 implements `PayableDocument`: the employee is the payee, so the bank file pays them on the bank
