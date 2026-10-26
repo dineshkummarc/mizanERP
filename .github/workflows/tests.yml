@@ -46,5 +46,10 @@ jobs:
     # workflow step wins over the pin, and the whole suite ran against a shared
     # file instead of :memory:. TestEnvironmentTest exists to catch exactly that
     # and was the one failure that told the truth.
+    # In parallel, one process per core (ParaTest reads the count): the serial suite took three
+    # hours and fifty minutes on this runner against twenty-nine on a twelve-core laptop. The
+    # database is in memory per process already; tests/TestCase.php gives each process its own
+    # storage directory (uploads, compiled views, logs), and ModuleManifest writes its cache
+    # atomically — the two pieces of shared state the suite had.
     - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
-      run: php artisan test
+      run: php artisan test --parallel

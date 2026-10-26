@@ -212,7 +212,8 @@ retention), `config/custom_fields.php`.
 ## Testing
 
 ```bash
-php artisan test              # full suite
+php artisan test              # full suite, about half an hour
+php artisan test --parallel   # the same suite across every core, a few minutes
 ./vendor/bin/pint             # code style
 ```
 

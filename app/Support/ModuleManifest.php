@@ -334,7 +334,18 @@ class ModuleManifest
     {
         try {
             File::ensureDirectoryExists(dirname($cache));
-            File::put($cache, '<?php return '.var_export($merged, true).';'.PHP_EOL);
+
+            // Written beside the cache and renamed into place. Every process that finds the cache stale
+            // rebuilds it at the same moment — Octane's workers after a deploy, ParaTest's processes at the
+            // start of a run — and a reader that `include`s a half-written file gets a ParseError, not a
+            // stale registry. rename() is atomic on one filesystem: a reader sees the old file or the new.
+            $temp = tempnam(dirname($cache), 'mizan-modules-');
+            File::put($temp, '<?php return '.var_export($merged, true).';'.PHP_EOL);
+            @chmod($temp, 0644);
+
+            if (! @rename($temp, $cache)) {
+                @unlink($temp);
+            }
         } catch (Throwable) {
             // Left uncached deliberately.
         }
