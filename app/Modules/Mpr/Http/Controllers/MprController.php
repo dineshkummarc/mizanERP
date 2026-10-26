@@ -2,6 +2,7 @@
 
 namespace App\Modules\Mpr\Http\Controllers;
 
+use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Mpr\Models\MPR;
 use App\Modules\Mpr\Services\MprPdfService;
@@ -37,11 +38,8 @@ class MprController extends Controller
                 'pdf_url' => $this->singleReportUrl($mpr, $request->user()->name),
             ]);
 
-        return response()->json([
-            'success' => true,
-            'count' => $mprs->count(),
-            'data' => $mprs,
-        ], 200);
+        return ApiResponse::success(['count' => $mprs->count(),
+            'data' => $mprs]);
     }
 
     /**
@@ -52,16 +50,18 @@ class MprController extends Controller
         $result = (new MprPdfService)->generateComparisonReport($request->user()->id);
 
         if (! $result || $result['empty']) {
-            return response()->json(['success' => false, 'message' => 'This user has no MPR Record for comparison'], 400);
+            // 404 on the versioned surface, where "no record" is correctly not-found; the unprefixed route
+            // keeps its original 400 for clients already built against it (D4).
+            return ApiResponse::error(
+                'This user has no MPR Record for comparison',
+                $request->is('api/v1/*') ? 404 : 400,
+            );
         }
 
         $fileName = 'Mpr/'.$this->cleanName($request->user()->name).'_Comparison_'.Str::random(40).'.pdf';
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Comparison report generated successfully',
-            'pdf_url' => $this->store($fileName, $result['pdf']),
-        ], 200);
+        return ApiResponse::success(['message' => 'Comparison report generated successfully',
+            'pdf_url' => $this->store($fileName, $result['pdf'])]);
     }
 
     /**
@@ -72,18 +72,15 @@ class MprController extends Controller
         $mpr = MPR::where('id', $id)->where('user_id', $request->user()->id)->first();
 
         if (! $mpr) {
-            return response()->json(['success' => false, 'message' => 'MPR not found or unauthorized'], 404);
+            return ApiResponse::error('MPR not found or unauthorized', 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'id' => $mpr->id,
-                'title' => $mpr->title,
-                'remarks' => $mpr->remarks,
-                'pdf_url' => $this->singleReportUrl($mpr, $request->user()->name),
-            ],
-        ], 200);
+        return ApiResponse::success(['data' => [
+            'id' => $mpr->id,
+            'title' => $mpr->title,
+            'remarks' => $mpr->remarks,
+            'pdf_url' => $this->singleReportUrl($mpr, $request->user()->name),
+        ]]);
     }
 
     /** The stored single report: rendered on first request, remembered in `pdf_path`, reused after. */

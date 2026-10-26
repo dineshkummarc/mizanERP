@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AuthenticatedUserResource;
 use App\Modules\Core\Models\User;
@@ -40,33 +41,25 @@ class AuthController extends Controller
         $guard = Auth::guard('web');
 
         if (! $guard->validate(['email' => $data['email'], 'password' => $data['password']])) {
-            return response()->json(['success' => false, 'message' => 'Invalid email or password'], 401);
+            return ApiResponse::error('Invalid email or password', 401);
         }
 
         /** @var User $user */
         $user = $guard->getLastAttempted();
 
         if ((int) $user->status !== 1) {
-            return response()->json(['success' => false, 'message' => 'This account is disabled.'], 403);
+            return ApiResponse::error('This account is disabled.', 403);
         }
 
         // Second factor, for accounts the panels force it on (administrators). Without this the API handed a
         // phished password a full token that could name any tenant — security audit 2026-10-26, finding 3.
         if ($user->mustUseMultiFactorAuthentication()) {
             if (blank($user->getAppAuthenticationSecret())) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Set up two-factor authentication in the web app before signing in through the API.',
-                    'mfa_setup_required' => true,
-                ], 403);
+                return ApiResponse::error('Set up two-factor authentication in the web app before signing in through the API.', 403, ['mfa_setup_required' => true]);
             }
 
             if (! $this->secondFactorPasses($user, (string) $request->input('code', ''))) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'A valid two-factor code is required.',
-                    'mfa_required' => true,
-                ], 401);
+                return ApiResponse::error('A valid two-factor code is required.', 401, ['mfa_required' => true]);
             }
         }
 
@@ -108,7 +101,7 @@ class AuthController extends Controller
             $token->delete();
         }
 
-        return response()->json(['success' => true, 'message' => 'Signed out; this token no longer works.']);
+        return ApiResponse::success(['message' => 'Signed out; this token no longer works.']);
     }
 
     /** A fresh token for the same device, the old one revoked — how a client outlives `sanctum.expiration`. */
@@ -143,7 +136,7 @@ class AuthController extends Controller
             ])
             ->values();
 
-        return response()->json(['success' => true, 'count' => $devices->count(), 'data' => $devices]);
+        return ApiResponse::success(['count' => $devices->count(), 'data' => $devices]);
     }
 
     /** Sign out one device — the lost phone — from another. */
@@ -153,7 +146,7 @@ class AuthController extends Controller
 
         abort_unless($deleted, 404, 'No such device.');
 
-        return response()->json(['success' => true, 'message' => 'That device is signed out.']);
+        return ApiResponse::success(['message' => 'That device is signed out.']);
     }
 
     private function issued(User $user, string $deviceName, string $message): JsonResponse
@@ -163,13 +156,10 @@ class AuthController extends Controller
 
         $token = $user->createToken($deviceName, [self::ABILITY], $expiresAt);
 
-        return response()->json([
-            'success' => true,
-            'message' => $message,
+        return ApiResponse::success(['message' => $message,
             'token' => $token->plainTextToken,
             'token_type' => 'Bearer',
             'expires_at' => $expiresAt?->toIso8601String(),
-            'user' => new AuthenticatedUserResource($user),
-        ]);
+            'user' => new AuthenticatedUserResource($user)]);
     }
 }

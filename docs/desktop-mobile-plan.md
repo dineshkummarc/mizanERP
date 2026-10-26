@@ -102,7 +102,7 @@ required `device_name` in the login payload; `POST /api/logout` (revoke current)
 `GET/DELETE /api/tokens` (list/revoke devices); the login response slimmed to a
 deliberate resource, not `$user` raw. One test file pinning each behavior.
 
-**A2 — One envelope, one error grammar, `/v1`.** A thin `ApiResponse` support class (or
+**A2 — One envelope, one error grammar, `/v1`.** **Built 2026-10-26** (`ApiVersioningTest`): every route answers under both `/api` and `/api/v1` through `App\Support\ApiRoutes`, the five hand-rolled controllers answer through `App\Http\ApiResponse`, MprController's comparison is 404 on `/v1` and 400 unprefixed, and `docs/api/openapi.yaml` is the 15-endpoint spec with the error grammar. A thin `ApiResponse` support class (or
 plain `JsonResource`s — `AccountResource` is the precedent) adopted by the five
 hand-rolled controllers; `MprController`'s 400→404 corrected **under `/v1` only** (D4);
 module-gate 403 and tenant-resolution 422 documented in one place. Publish a static

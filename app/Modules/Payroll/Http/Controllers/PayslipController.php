@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Http\Controllers;
 
+use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Core\Models\Comment;
 use App\Modules\Employees\Models\Employee;
@@ -30,10 +31,7 @@ class PayslipController extends Controller
         $employee = Employee::where('user_id', $request->user()->id)->first();
 
         if (! $employee) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Employee profile not found',
-            ], 404);
+            return ApiResponse::error('Employee profile not found', 404);
         }
 
         $payslips = Payslip::where('employee_id', $employee->id)
@@ -49,11 +47,8 @@ class PayslipController extends Controller
                 return $payslip;
             });
 
-        return response()->json([
-            'success' => true,
-            'count' => $payslips->count(),
-            'data' => $payslips,
-        ], 200);
+        return ApiResponse::success(['count' => $payslips->count(),
+            'data' => $payslips]);
     }
 
     /**
@@ -104,11 +99,8 @@ class PayslipController extends Controller
                 'created_at' => $comment->created_at,
             ]);
 
-        return response()->json([
-            'success' => true,
-            'count' => $comments->count(),
-            'data' => $comments,
-        ], 200);
+        return ApiResponse::success(['count' => $comments->count(),
+            'data' => $comments]);
     }
 
     /**
@@ -133,14 +125,11 @@ class PayslipController extends Controller
             'user_id' => $user->id,
         ]);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'id' => $comment->id,
-                'body' => $comment->body,
-                'user_id' => $comment->user_id,
-                'created_at' => $comment->created_at,
-            ],
-        ], 201);
+        return ApiResponse::success(['data' => [
+            'id' => $comment->id,
+            'body' => $comment->body,
+            'user_id' => $comment->user_id,
+            'created_at' => $comment->created_at,
+        ]], 201);
     }
 }

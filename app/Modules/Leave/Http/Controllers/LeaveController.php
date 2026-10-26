@@ -2,6 +2,7 @@
 
 namespace App\Modules\Leave\Http\Controllers;
 
+use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Leave\Models\LeaveRequest;
@@ -40,10 +41,7 @@ class LeaveController extends Controller
         $employee = Employee::where('user_id', $request->user()->id)->first();
 
         if (! $employee) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Employee profile not found',
-            ], 404);
+            return ApiResponse::error('Employee profile not found', 404);
         }
 
         $data = LeaveType::query()
@@ -75,11 +73,8 @@ class LeaveController extends Controller
                 ];
             });
 
-        return response()->json([
-            'success' => true,
-            'count' => $data->count(),
-            'data' => $data,
-        ], 200);
+        return ApiResponse::success(['count' => $data->count(),
+            'data' => $data]);
     }
 
     /**
@@ -95,10 +90,7 @@ class LeaveController extends Controller
         $employee = Employee::where('user_id', $request->user()->id)->first();
 
         if (! $employee) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Employee profile not found',
-            ], 404);
+            return ApiResponse::error('Employee profile not found', 404);
         }
 
         // The same gate the panel's create page asks (LeaveRequestPolicy).
@@ -159,25 +151,19 @@ class LeaveController extends Controller
         try {
             $leaveRequest = $service->submit($leaveRequest, $request->user());
         } catch (InvalidArgumentException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 422);
+            return ApiResponse::error($e->getMessage(), 422);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'id' => $leaveRequest->id,
-                'status' => $leaveRequest->status,
-                'leave_type_id' => $leaveRequest->leave_type_id,
-                'from_date' => $leaveRequest->from_date->toDateString(),
-                'to_date' => $leaveRequest->to_date->toDateString(),
-                'is_half_day' => $leaveRequest->is_half_day,
-                'half_day_period' => $leaveRequest->half_day_period,
-                // What the range will cost, planned now; regenerated at approval.
-                'days' => (float) $leaveRequest->days,
-            ],
-        ], 201);
+        return ApiResponse::success(['data' => [
+            'id' => $leaveRequest->id,
+            'status' => $leaveRequest->status,
+            'leave_type_id' => $leaveRequest->leave_type_id,
+            'from_date' => $leaveRequest->from_date->toDateString(),
+            'to_date' => $leaveRequest->to_date->toDateString(),
+            'is_half_day' => $leaveRequest->is_half_day,
+            'half_day_period' => $leaveRequest->half_day_period,
+            // What the range will cost, planned now; regenerated at approval.
+            'days' => (float) $leaveRequest->days,
+        ]], 201);
     }
 }

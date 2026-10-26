@@ -1,0 +1,424 @@
+openapi: 3.1.0
+info:
+  title: Mizan API
+  version: "1.0"
+  description: >
+    The JSON API for mobile and integration clients (docs/desktop-mobile-plan.md A2).
+    Versioning (D4): every path is served under both /api (deprecated, kept for clients already in the
+    field) and /api/v1; new work targets /v1. The one shape that differs is GET /my-mprs/comparison with
+    no records, which is 404 under /v1 and 400 unprefixed.
+    Envelope: every response carries a boolean success; a success adds the endpoint's own fields, an error
+    adds message and sometimes extra fields such as errors or mfa_required (App\Http\ApiResponse).
+    Auth: obtain a bearer token from POST /login (it carries the api ability and expires after
+    SANCTUM_TOKEN_EXPIRATION minutes; refresh at POST /refresh) and send it as Authorization Bearer.
+    Company: an account in one company is resolved automatically; an account in several must name one with
+    the X-Company header or the request is 422.
+    Error grammar - 401 no or bad credentials or a missing, expired or ability-less token or a required
+    second factor; 403 the module is not licensed or MFA setup is required; 404 the record does not exist
+    or is not the caller's; 422 validation failed or the account named no company among several; 429 rate
+    limited (5/min on login per email and address, 90/min otherwise).
+servers:
+  - url: https://mizan.erbium.tech/api/v1
+    description: Versioned surface
+  - url: https://mizan.erbium.tech/api
+    description: Unprefixed, deprecated
+security:
+  - bearer: []
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Company:
+      name: X-Company
+      in: header
+      required: false
+      schema:
+        type: string
+      description: The company slug, required only for an account that belongs to more than one.
+  schemas:
+    Success:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+    Error:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          const: false
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials or token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Module not licensed, or MFA setup required.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: No such record for this caller.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unprocessable:
+      description: Validation failed, or the company is ambiguous.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Rate limited.
+paths:
+  /login:
+    post:
+      summary: Sign in and receive a device token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, device_name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                device_name:
+                  type: string
+                  maxLength: 100
+                code:
+                  type: string
+                  description: TOTP or recovery code, required when the account enforces MFA.
+      responses:
+        '200':
+          description: A bearer token.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      token:
+                        type: string
+                      token_type:
+                        const: Bearer
+                      expires_at:
+                        type: [string, 'null']
+                      user:
+                        type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /logout:
+    post:
+      summary: Revoke the current device token
+      responses:
+        '200':
+          description: Done.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /refresh:
+    post:
+      summary: Replace the current token with a fresh one
+      responses:
+        '200':
+          description: A new token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /tokens:
+    get:
+      summary: List this account's devices
+      responses:
+        '200':
+          description: Devices.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /tokens/{token}:
+    delete:
+      summary: Sign one device out
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Done.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /my-profile:
+    get:
+      summary: The signed-in employee's own profile
+      parameters:
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: Profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /my-payslips:
+    get:
+      summary: The caller's own payslips
+      parameters:
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: Payslips.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /my-payslips/{payslip}/pdf:
+    get:
+      summary: A payslip PDF the caller owns
+      parameters:
+        - name: payslip
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: The payslip PDF url.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /payslips/{payslip}/comments:
+    get:
+      summary: Comments on a payslip the caller may view
+      parameters:
+        - name: payslip
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: Comments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Add a comment to a payslip
+      parameters:
+        - name: payslip
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/Company'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /my-leave-balances:
+    get:
+      summary: The caller's leave balances by type
+      parameters:
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: Balances.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /my-leave-requests:
+    post:
+      summary: File leave for the signed-in employee
+      parameters:
+        - $ref: '#/components/parameters/Company'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [leave_type_id, from_date, to_date]
+              properties:
+                leave_type_id:
+                  type: integer
+                from_date:
+                  type: string
+                  format: date
+                to_date:
+                  type: string
+                  format: date
+                is_half_day:
+                  type: boolean
+                half_day_period:
+                  type: string
+                  enum: [first, second]
+                reason:
+                  type: string
+                  maxLength: 2000
+                document:
+                  type: string
+                  format: binary
+                  description: Required when the leave type demands one.
+      responses:
+        '201':
+          description: Filed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /my-mprs:
+    get:
+      summary: The caller's own MPRs
+      parameters:
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: MPRs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /my-mprs/comparison:
+    get:
+      summary: A comparison report across the caller's MPRs
+      parameters:
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: The report url.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '404':
+          description: No records to compare on this surface; the unprefixed route answers 400.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /my-mprs/{id}:
+    get:
+      summary: One MPR the caller owns
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: MPR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
