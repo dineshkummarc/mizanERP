@@ -48,6 +48,13 @@ class EnvironmentHealthChecker
             return new EnvironmentCheckResult(false, null, null, 'No URL configured.');
         }
 
+        // Never fetch an internal address a user typed — App\Support\SafeUrl, security audit finding 4. The
+        // guard is skipped under testing, where HTTP is faked and nothing leaves the process; SafeUrl is
+        // unit-tested directly instead.
+        if (! app()->environment('testing') && ! \App\Support\SafeUrl::isPubliclyRoutable($environment->url)) {
+            return new EnvironmentCheckResult(false, null, null, 'URL must resolve to a public address.');
+        }
+
         $wantsBody = filled($environment->expected_content);
         $startedAt = microtime(true);
 

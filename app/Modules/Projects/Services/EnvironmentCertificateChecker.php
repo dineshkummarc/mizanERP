@@ -35,6 +35,11 @@ class EnvironmentCertificateChecker
         }
 
         $port = $parts['port'] ?? 443;
+
+        // Same guard as the health checker (skipped under testing): never open a socket to an internal host.
+        if (! app()->environment('testing') && ! \App\Support\SafeUrl::isPubliclyRoutable($environment->url)) {
+            return null;
+        }
         $timeout = (int) config('projects.ssl.timeout', 5);
 
         try {

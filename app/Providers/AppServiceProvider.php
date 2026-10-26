@@ -184,8 +184,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Row scoping is turned off globally below (scopeToTenant(false)) and isolation rests entirely on the
+        // per-company connection. An empty TENANT_DATABASE_CONNECTION reads as "" and would put every company
+        // on one database with no scoping and no error — security audit finding 8. Refuse to boot production
+        // in that state rather than serve every tenant the same rows.
+        throw_if(
+            app()->environment('production') && blank(config('multitenancy.tenant_database_connection_name')),
+            \RuntimeException::class,
+            'multitenancy.tenant_database_connection_name is empty: tenants would share one database. Set TENANT_DATABASE_CONNECTION.',
+        );
+
         // Five tries a minute per email and address, then 429 — docs/desktop-mobile-plan.md A1. Keyed on
         // both so a guess at one account from many addresses and at many accounts from one are both slowed.
+        // Every API request: 90 a minute per account, or per address before sign-in — security audit finding 11.
+        RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(90)
+            ->by((string) ($request->user()?->getAuthIdentifier() ?: $request->ip())));
+
         RateLimiter::for('login', fn (Request $request): Limit => Limit::perMinute(5)
             ->by(Str::lower((string) $request->input('email')).'|'.$request->ip()));
 

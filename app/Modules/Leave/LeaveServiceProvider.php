@@ -2,6 +2,8 @@
 
 namespace App\Modules\Leave;
 
+use App\Modules\Core\Models\Company;
+use App\Modules\Core\Models\User;
 use App\Modules\Leave\Console\Commands\LapseCarriedDays;
 use App\Modules\Leave\Console\Commands\OpenLeaveYear;
 use App\Modules\Leave\Models\LeaveAdjustment;
@@ -14,6 +16,8 @@ use App\Modules\Leave\Policies\LeaveDayPolicy;
 use App\Modules\Leave\Policies\LeaveEntitlementPolicy;
 use App\Modules\Leave\Policies\LeaveRequestPolicy;
 use App\Modules\Leave\Policies\LeaveTypePolicy;
+use App\Support\EmployeeAccess;
+use App\Support\TenantFileAccess;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -42,6 +46,25 @@ class LeaveServiceProvider extends ServiceProvider
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // leave-requests/ files stream only to the employee's own reporting line — security audit finding 10.
+        TenantFileAccess::register(function (User $user, Company $company, string $path): ?bool {
+            if (! str_starts_with($path, 'leave-requests/')) {
+                return null;
+            }
+
+            $lookup = fn () => LeaveRequest::query()->where('document_path', $path)->first();
+            $switch = ! Company::current()?->is($company) && filled(config('multitenancy.tenant_database_connection_name'));
+            $record = $switch ? $company->execute($lookup) : $lookup();
+
+            if (! $record) {
+                return null;
+            }
+
+            $access = app(EmployeeAccess::class);
+
+            return $access->isPrivileged($user) || $access->accessibleEmployeeIds($user)->contains($record->employee_id);
+        });
 
         $this->loadRoutesFrom(__DIR__.'/routes/api.php');
 

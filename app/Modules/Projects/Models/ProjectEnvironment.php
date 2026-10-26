@@ -64,6 +64,8 @@ class ProjectEnvironment extends Model
         'ssl_expires_at' => 'datetime',
         'ssl_checked_at' => 'datetime',
         'ssl_valid_chain' => 'boolean',
+        // Encrypted at rest — security audit finding 14. The activity-log exclusion below still applies.
+        'password' => 'encrypted',
     ];
 
     /**

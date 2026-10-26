@@ -12,6 +12,11 @@ class EmployeeSeeder extends Seeder
 {
     public function run()
     {
+        // Mints logins with a known password; never in production — security audit finding 14.
+        if (app()->environment('production')) {
+            return;
+        }
+
         // Dummy staff. The real roster lives in
         // Database\Seeders\Production\RealEmployeeSeeder and is not part of
         // the default `db:seed` run.

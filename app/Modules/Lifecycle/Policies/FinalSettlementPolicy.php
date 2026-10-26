@@ -14,7 +14,16 @@ class FinalSettlementPolicy
 
     public function view(User $user, FinalSettlement $settlement): bool
     {
-        return $user->hasPermissionTo('SettlementView');
+        if (! $user->hasPermissionTo('SettlementView')) {
+            return false;
+        }
+
+        // A settlement manager sees all; a mere viewer sees their own reporting line — security audit finding 9.
+        if (\App\Modules\Lifecycle\Filament\Resources\FinalSettlements\FinalSettlementResource::seesEverySettlement($user)) {
+            return true;
+        }
+
+        return app(\App\Support\EmployeeAccess::class)->accessibleEmployeeIds($user)->contains($settlement->employee_id);
     }
 
     public function create(User $user): bool

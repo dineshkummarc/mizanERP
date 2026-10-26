@@ -39,6 +39,30 @@ class FinalSettlementResource extends Resource
 
     protected static ?string $model = FinalSettlement::class;
 
+    /**
+     * A mere viewer (SettlementView only, a line manager) sees their own reporting downline; a settlement
+     * manager (Approve/Update) or a privileged role sees them all — security audit finding 9. Without this
+     * anyone with SettlementView read every leaver's figures regardless of hierarchy.
+     */
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user && ! static::seesEverySettlement($user)) {
+            $query->whereIn('employee_id', app(\App\Support\EmployeeAccess::class)->accessibleEmployeeIds($user)->all());
+        }
+
+        return $query;
+    }
+
+    /** Whoever manages settlements, rather than merely reading their own line, sees all of them. */
+    public static function seesEverySettlement(\App\Modules\Core\Models\User $user): bool
+    {
+        return app(\App\Support\EmployeeAccess::class)->isPrivileged($user)
+            || $user->canAny(['SettlementCreate', 'SettlementUpdate', 'SettlementApprove', 'SettlementDelete']);
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
     protected static string|UnitEnum|null $navigationGroup = 'Employee';

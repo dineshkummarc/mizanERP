@@ -20,7 +20,7 @@ Route::get('/', function () {
 // `tenants/{id}`, and keying the URL the same way keeps the two from drifting.
 Route::get(TenantStorage::URL_PREFIX.'/{company:id}/{path}', [TenantFileController::class, 'show'])
     ->where('path', '.*')
-    ->middleware(['auth:web,sanctum'])
+    ->middleware(['auth:web,sanctum', \App\Http\Middleware\RequireTokenAbility::class])
     ->name('tenant-file');
 
 // The document `whatsapp:test` hands a provider to fetch, so the Twilio driver — which sends media

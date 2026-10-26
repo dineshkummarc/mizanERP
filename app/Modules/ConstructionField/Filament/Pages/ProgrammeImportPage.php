@@ -17,7 +17,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use InvalidArgumentException;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use UnitEnum;
@@ -159,7 +159,7 @@ class ProgrammeImportPage extends Page implements HasForms
          */
         Notification::make()
             ->title($summary->describe())
-            ->body(Blade::render(
+            ->body(new HtmlString(
                 $summary->hasWarnings()
                     ? '<div>'.e(implode(' ', array_slice($summary->warnings, 0, 5))).'</div>'
                     : '<div>Read as '.e($summary->source).'.</div>'

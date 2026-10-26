@@ -26,7 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // A token must carry the `api` ability — docs/desktop-mobile-plan.md A1. On the group, so a route
         // file added later cannot forget it.
-        $middleware->api(append: [App\Http\Middleware\RequireTokenAbility::class]);
+        $middleware->api(append: [App\Http\Middleware\RequireTokenAbility::class, 'throttle:api']);
 
         // Licensing is enforced per route, not globally: most routes belong to a
         // module, and the ones that do not (login, the panel shell, tenant file

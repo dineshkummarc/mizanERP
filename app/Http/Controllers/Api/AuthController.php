@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AuthenticatedUserResource;
 use App\Modules\Core\Models\User;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -48,7 +50,53 @@ class AuthController extends Controller
             return response()->json(['success' => false, 'message' => 'This account is disabled.'], 403);
         }
 
+        // Second factor, for accounts the panels force it on (administrators). Without this the API handed a
+        // phished password a full token that could name any tenant — security audit 2026-10-26, finding 3.
+        if ($user->mustUseMultiFactorAuthentication()) {
+            if (blank($user->getAppAuthenticationSecret())) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Set up two-factor authentication in the web app before signing in through the API.',
+                    'mfa_setup_required' => true,
+                ], 403);
+            }
+
+            if (! $this->secondFactorPasses($user, (string) $request->input('code', ''))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A valid two-factor code is required.',
+                    'mfa_required' => true,
+                ], 401);
+            }
+        }
+
         return $this->issued($user, $data['device_name'], 'Login successful');
+    }
+
+    /**
+     * A TOTP code, or a recovery code, against the user's enrolled app-authentication secret.
+     *
+     * Reuses Filament's own verifier (the same window and single-use enforcement the panel applies), so a
+     * code accepted here cannot be replayed and the API and the panel agree on what a valid code is.
+     */
+    private function secondFactorPasses(User $user, string $code): bool
+    {
+        if ($code === '') {
+            return false;
+        }
+
+        $provider = AppAuthentication::make();
+
+        if ($provider->verifyCode($code, $user->getAppAuthenticationSecret(), shouldPreventCodeReuse: true)) {
+            return true;
+        }
+
+        try {
+            return $user instanceof HasAppAuthenticationRecovery && $provider->verifyRecoveryCode($code, $user);
+        } catch (\Throwable) {
+            // No recovery codes enrolled: a wrong TOTP is simply wrong, not a 500.
+            return false;
+        }
     }
 
     /** Sign this device out: the token that made the request stops working. */

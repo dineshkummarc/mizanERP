@@ -71,6 +71,19 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     protected static function booted(): void
     {
+        // Super-admin is the one installation-level authority; no mass-assignment or crafted form may grant it.
+        // Changing it is allowed only by a super admin, or by console/seeding where nobody is signed in —
+        // security audit finding 13.
+        static::saving(function (self $user): void {
+            // Granting super-admin is the escalation that matters; console and seeding have no signed-in actor.
+            // On an existing account: promoting it to super-admin is the escalation path (mass assignment or a
+            // crafted form). A brand-new record is left to the factory, seeder and platform panel.
+            if ($user->exists && $user->is_super_admin && $user->isDirty('is_super_admin')
+                && auth()->check() && ! auth()->user()->isSuperAdmin()) {
+                throw new \RuntimeException('Only a super administrator may grant super-admin status.');
+            }
+        });
+
         /*
          * The last platform admin cannot be deleted or stood down.
          *
@@ -341,6 +354,12 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function canAccessTenant(Model $tenant): bool
     {
+        // A suspended company admits nobody — status is set from the platform panel and, without this,
+        // was stored and never read (security audit 2026-10-26, finding 12). A super admin still reaches it.
+        if ($tenant instanceof \App\Modules\Core\Models\Company && (int) $tenant->status !== 1 && ! $this->isSuperAdmin()) {
+            return false;
+        }
+
         return $this->isSuperAdmin()
             || $this->companies()->whereKey($tenant->getKey())->exists();
     }

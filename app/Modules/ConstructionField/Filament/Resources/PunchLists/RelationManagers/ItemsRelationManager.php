@@ -135,6 +135,7 @@ class ItemsRelationManager extends RelationManager
                 FileUpload::make('before_photo_path')
                     ->label('Before')
                     ->image()
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                     ->disk('public')
                     ->directory('construction/punch-photos')
                     ->maxSize(12288),
@@ -142,6 +143,7 @@ class ItemsRelationManager extends RelationManager
                 FileUpload::make('after_photo_path')
                     ->label('After')
                     ->image()
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                     ->disk('public')
                     ->directory('construction/punch-photos')
                     ->maxSize(12288)

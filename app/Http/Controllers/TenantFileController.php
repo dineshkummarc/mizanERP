@@ -43,8 +43,15 @@ class TenantFileController extends Controller
 
         // Inline so PDFs and images open in the browser; ?download=1 forces the
         // save dialog.
-        return $request->boolean('download')
+        $response = $request->boolean('download')
             ? $disk->download($path, basename($path))
             : $disk->response($path, basename($path));
+
+        // Defence in depth for an image that is really a script (an SVG slipped past an upload filter):
+        // no sniffing, and a policy that lets the file render but run nothing — security audit finding 5.
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+
+        return $response;
     }
 }

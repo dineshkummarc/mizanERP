@@ -3,6 +3,8 @@
 namespace App\Modules\Employees;
 
 use App\Events\UserCreated;
+use App\Modules\Core\Models\Company;
+use App\Modules\Core\Models\User;
 use App\Modules\Employees\Console\Commands\ApplyDueJobChanges;
 use App\Modules\Employees\Filament\Pages\HeadcountMovement;
 use App\Modules\Employees\Listeners\CreateEmployeeForUser;
@@ -15,9 +17,11 @@ use App\Modules\Employees\Policies\EmployeeSettingPolicy;
 use App\Modules\Employees\Support\HeadcountReports;
 use App\Support\CustomFieldSubjects;
 use App\Support\DashboardStats;
+use App\Support\EmployeeAccess;
 use App\Support\ModuleMap;
 use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportRenderers;
+use App\Support\TenantFileAccess;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -59,6 +63,25 @@ class EmployeesServiceProvider extends ServiceProvider
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // NIC scans stream only to the employee's own reporting line — security audit finding 10.
+        TenantFileAccess::register(function (User $user, Company $company, string $path): ?bool {
+            if (! str_starts_with($path, 'nic/')) {
+                return null;
+            }
+
+            $lookup = fn () => Employee::query()->where('nic_front', $path)->orWhere('nic_back', $path)->first();
+            $switch = ! Company::current()?->is($company) && filled(config('multitenancy.tenant_database_connection_name'));
+            $employee = $switch ? $company->execute($lookup) : $lookup();
+
+            if (! $employee) {
+                return null;
+            }
+
+            $access = app(EmployeeAccess::class);
+
+            return $access->isPrivileged($user) || $access->accessibleEmployeeIds($user)->contains($employee->id);
+        });
 
         $this->loadRoutesFrom(__DIR__.'/routes/api.php');
 

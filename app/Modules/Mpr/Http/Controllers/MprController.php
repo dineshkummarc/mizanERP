@@ -8,6 +8,7 @@ use App\Modules\Mpr\Services\MprPdfService;
 use App\Support\Pdf\PdfDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * The signed-in user's MPRs, for mobile clients.
@@ -54,7 +55,7 @@ class MprController extends Controller
             return response()->json(['success' => false, 'message' => 'This user has no MPR Record for comparison'], 400);
         }
 
-        $fileName = 'Mpr/'.$this->cleanName($request->user()->name).'_Comparison_'.time().'_'.uniqid().'.pdf';
+        $fileName = 'Mpr/'.$this->cleanName($request->user()->name).'_Comparison_'.Str::random(40).'.pdf';
 
         return response()->json([
             'success' => true,
@@ -89,7 +90,7 @@ class MprController extends Controller
     private function singleReportUrl(MPR $mpr, string $userName): string
     {
         if (! $mpr->pdf_path || ! Storage::disk('public')->exists($mpr->pdf_path)) {
-            $fileName = 'Mpr/'.$this->cleanName($userName).'_'.time().'.pdf';
+            $fileName = 'Mpr/'.$this->cleanName($userName).'_'.Str::random(40).'.pdf';
 
             $this->store($fileName, (new MprPdfService)->generateSingleReport($mpr->toArray())['pdf']);
             $mpr->update(['pdf_path' => $fileName]);

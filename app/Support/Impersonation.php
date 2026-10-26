@@ -255,6 +255,16 @@ class Impersonation
      */
     protected function canReach(User $actor, User $target): bool
     {
+        // A non-super-admin takes on the target's entire reach while impersonating, so the target must not
+        // belong to any company the actor does not — otherwise inviting a foreign account into the actor's
+        // company (CompanyInvitations) and impersonating it would cross into that account's other tenants.
+        // Checked before the per-company rules below, which only ask about the company being worked in.
+        if (! $actor->isSuperAdmin()
+            && $target->companies()->pluck('companies.id')
+                ->diff($actor->companies()->pluck('companies.id'))->isNotEmpty()) {
+            return false;
+        }
+
         $company = Filament::getTenant() ?? Company::current();
 
         if ($company instanceof Company) {

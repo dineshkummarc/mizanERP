@@ -2,6 +2,8 @@
 
 namespace App\Modules\Lifecycle;
 
+use App\Modules\Core\Models\Company;
+use App\Modules\Core\Models\User;
 use App\Modules\Lifecycle\Console\Commands\CheckDocumentExpiry;
 use App\Modules\Lifecycle\Filament\Pages\AssetsInHand;
 use App\Modules\Lifecycle\Filament\Pages\ChecklistProgress;
@@ -25,8 +27,10 @@ use App\Modules\Lifecycle\Policies\IssuedAssetPolicy;
 use App\Modules\Lifecycle\Support\ChecklistReports;
 use App\Modules\Lifecycle\Support\LifecycleReports;
 use App\Modules\Lifecycle\Support\SettlementReports;
+use App\Support\EmployeeAccess;
 use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportRenderers;
+use App\Support\TenantFileAccess;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -49,6 +53,25 @@ class LifecycleServiceProvider extends ServiceProvider
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // employee-documents/ files stream only to the employee's own reporting line — security audit finding 10.
+        TenantFileAccess::register(function (User $user, Company $company, string $path): ?bool {
+            if (! str_starts_with($path, 'employee-documents/')) {
+                return null;
+            }
+
+            $lookup = fn () => EmployeeDocument::query()->where('file_path', $path)->first();
+            $switch = ! Company::current()?->is($company) && filled(config('multitenancy.tenant_database_connection_name'));
+            $record = $switch ? $company->execute($lookup) : $lookup();
+
+            if (! $record) {
+                return null;
+            }
+
+            $access = app(EmployeeAccess::class);
+
+            return $access->isPrivileged($user) || $access->accessibleEmployeeIds($user)->contains($record->employee_id);
+        });
 
         $this->commands([CheckDocumentExpiry::class]);
 

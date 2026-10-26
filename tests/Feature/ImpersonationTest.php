@@ -106,6 +106,34 @@ class ImpersonationTest extends TestCase
         $this->assertTrue($this->impersonation->impersonator()->is($admin));
     }
 
+    /**
+     * The invite-then-impersonate takeover is refused — security audit 2026-10-26, finding 1.
+     *
+     * An administrator of this company may not sign in as a user who also belongs to another company,
+     * because impersonating them would hand the administrator that other company. A user who belongs only
+     * here is still reachable.
+     */
+    public function test_cannot_impersonate_a_user_who_also_belongs_to_another_company(): void
+    {
+        $admin = $this->member('Administrator');
+        $targetBothCompanies = $this->member('Employee');
+        $otherCompany = Company::factory()->create();
+        $targetBothCompanies->companies()->syncWithoutDetaching([$otherCompany->getKey()]);
+
+        $onlyHere = $this->member('Employee');
+
+        $this->actAs($admin);
+
+        $this->assertFalse(
+            $this->impersonation->allows($admin, $targetBothCompanies),
+            'an admin must not reach a user who also belongs to another company',
+        );
+        $this->assertTrue(
+            $this->impersonation->allows($admin, $onlyHere),
+            'a user who belongs only to this company is still reachable',
+        );
+    }
+
     public function test_an_ordinary_employee_cannot_impersonate(): void
     {
         $employee = $this->member('Employee');

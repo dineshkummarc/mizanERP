@@ -27,7 +27,7 @@ unless you ask not to be.
 
 ## Known, deliberate decisions — not novel findings
 
-- **Project environment passwords are stored and displayed in plain text, by
+- **Project environment passwords are encrypted at rest** (since 2026-10-26); they remain visible in plain text in the panel to anyone with ProjectView, by
   deliberate decision.** They are shared team credentials for dev/qual/prod
   URLs, and quick copy-paste is the point of the feature. Every user holding
   `ProjectView` can read them, and a database dump exposes them. This is

@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Modules\Core\Models\Company;
 use App\Modules\Core\Models\User;
+use App\Support\TenantStorage;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
+use Illuminate\Support\Facades\File;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\AccountingTestCase;
 
@@ -162,5 +165,48 @@ class ApiAuthTest extends AccountingTestCase
         $expired = $this->user->createToken('old phone', ['api'], now()->subMinute())->plainTextToken;
 
         $this->as($expired)->getJson('/api/tokens')->assertUnauthorized();
+    }
+
+    public function test_login_demands_the_second_factor_from_an_mfa_account(): void
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@test.local', 'password' => bcrypt('password'), 'status' => 1, 'is_super_admin' => true]);
+        $admin->companies()->attach($this->company->getKey());
+        $this->assertTrue($admin->mustUseMultiFactorAuthentication());
+
+        $body = ['email' => 'admin@test.local', 'password' => 'password', 'device_name' => 'Pixel 8'];
+
+        // Not enrolled yet: the API cannot take an enrolment, so it directs them to the web app.
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/login', $body)->assertStatus(403)->assertJsonPath('mfa_setup_required', true);
+
+        $secret = 'JBSWY3DPEHPK3PXP';
+        $admin->saveAppAuthenticationSecret($secret);
+
+        // Enrolled, no code: refused.
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/login', $body)->assertStatus(401)->assertJsonPath('mfa_required', true);
+
+        // Enrolled, wrong code: refused.
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/login', $body + ['code' => '000000'])->assertStatus(401);
+
+        // Enrolled, the current code: in.
+        $code = AppAuthentication::make()->getCurrentCode($admin, $secret);
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/login', $body + ['code' => $code])->assertOk()->assertJsonPath('success', true);
+    }
+
+    public function test_a_token_without_the_api_ability_cannot_stream_a_file(): void
+    {
+        $root = TenantStorage::publicRoot($this->company);
+        File::ensureDirectoryExists($root.'/payslips');
+        File::put($root.'/payslips/january.pdf', '%PDF-x');
+
+        $withApi = $this->user->createToken('phone', ['api'])->plainTextToken;
+        $withoutApi = $this->user->createToken('scoped', ['read-only'])->plainTextToken;
+        $path = "/files/{$this->company->getKey()}/payslips/january.pdf";
+
+        $this->as($withApi)->get($path)->assertOk();
+        $this->as($withoutApi)->get($path)->assertForbidden();
     }
 }
