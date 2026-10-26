@@ -31,8 +31,10 @@ Schedule::command(DeliverScheduledReports::class)
  * by every company, so it grows with all of them at once. It is also, since the record-change
  * notifications, the table the bell hangs off; a table nothing prunes is a query that gets slower forever.
  *
- * Nightly, in the quiet hours, and never two at once.
+ * Nightly, in the quiet hours, and never two at once. **** because the command is confirmable
+ * (ConfirmableTrait) and refuses to run unattended in production without it — without the flag the scheduled
+ * job exited 1 every night and the retention never ran, which is the unbounded growth it exists to stop.
  */
-Schedule::command('activitylog:clean')
+Schedule::command('activitylog:clean --force')
     ->dailyAt('03:15')
     ->withoutOverlapping();
