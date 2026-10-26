@@ -27,11 +27,11 @@ class MailFailoverTest extends TestCase
         ]);
     }
 
-    public function test_the_failover_chain_is_sendgrid_then_mailgun_and_nothing_else(): void
+    public function test_the_failover_chain_is_mailgun_then_sendgrid_and_nothing_else(): void
     {
-        // SendGrid leads — it is the leg that authenticates and delivers; Mailgun is
-        // the standby (its prod SMTP auth needs fixing). See config/mail.php.
-        $this->assertSame(['sendgrid', 'mailgun'], config('mail.mailers.failover.mailers'));
+        // Mailgun leads — it authenticates as mg.erbium.ch, so mail leaves with aligned SPF/DKIM;
+        // SendGrid is the standby, tried only if Mailgun throws. See config/mail.php.
+        $this->assertSame(['mailgun', 'sendgrid'], config('mail.mailers.failover.mailers'));
     }
 
     public function test_sendgrid_resolves_to_its_api_transport(): void
@@ -57,7 +57,7 @@ class MailFailoverTest extends TestCase
         }
     }
 
-    public function test_the_chain_builds_with_sendgrid_ahead_of_mailgun(): void
+    public function test_the_chain_builds_with_mailgun_ahead_of_sendgrid(): void
     {
         config(['mail.mailers.mailgun.host' => 'smtp.eu.mailgun.org']);
 
@@ -67,7 +67,7 @@ class MailFailoverTest extends TestCase
 
         // The order is the decision: the second provider is only ever tried after the first has thrown.
         $description = (string) $transport;
-        $this->assertLessThan(strpos($description, 'mailgun'), strpos($description, 'sendgrid'), $description);
+        $this->assertLessThan(strpos($description, 'sendgrid'), strpos($description, 'mailgun'), $description);
         $this->assertStringNotContainsString('log', $description, 'no silent last resort');
     }
 }

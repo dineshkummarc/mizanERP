@@ -124,11 +124,13 @@ return [
          */
         'failover' => [
             'transport' => 'failover',
-            // SendGrid first (it works), Mailgun as the standby (its SMTP auth needs fixing to be a
-            // real fallback). Reversed from Mailgun-first on 2026-09-30 — see the comment above.
+            // Mailgun first: it authenticates as mg.erbium.ch, so mail leaves with aligned SPF/DKIM rather
+            // than SendGrid's domain. Restored to Mailgun-first on 2026-10-26 once its SMTP auth was
+            // confirmed working (it had been reversed to SendGrid-first on 2026-09-30 while auth was broken).
+            // SendGrid remains the standby, tried only if Mailgun throws.
             'mailers' => [
-                'sendgrid',
                 'mailgun',
+                'sendgrid',
             ],
         ],
 
