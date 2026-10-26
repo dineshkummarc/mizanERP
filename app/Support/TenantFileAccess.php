@@ -32,6 +32,44 @@ final class TenantFileAccess
         self::$resolvers[] = $resolver;
     }
 
+    /**
+     * Allow a file under $prefix only to someone who may `view` the record it belongs to.
+     *
+     * $lookup is given the path and returns the owning record (or null). It runs in the file's company —
+     * the one in the URL, which need not be the current tenant — so a cross-company file resolves against
+     * the right database. A path that matches no record falls through to membership, which is right for a
+     * swept temp file or a name no row owns.
+     *
+     * @param  Closure(string): ?\Illuminate\Database\Eloquent\Model  $lookup
+     */
+    public static function registerRecordPrefix(string $prefix, Closure $lookup): void
+    {
+        self::register(function (User $user, Company $company, string $path) use ($prefix, $lookup): ?bool {
+            if (! str_starts_with($path, $prefix)) {
+                return null;
+            }
+
+            $run = fn () => $lookup($path);
+            $switch = ! Company::current()?->is($company) && filled(config('multitenancy.tenant_database_connection_name'));
+            $record = $switch ? $company->execute($run) : $run();
+
+            return $record ? $user->can('view', $record) : null;
+        });
+    }
+
+    /**
+     * Allow every file under $prefix only to a holder of $permission.
+     *
+     * For paths with no owning row to scope to — a transient import file, a receipt whose model has no
+     * policy. The permission is the one that governs the records those files belong to.
+     */
+    public static function registerPermissionPrefix(string $prefix, string $permission): void
+    {
+        self::register(fn (User $user, Company $company, string $path): ?bool => str_starts_with($path, $prefix)
+            ? ($user->can($permission) ?: false)
+            : null);
+    }
+
     public static function allows(User $user, Company $company, string $path): bool
     {
         foreach (self::$resolvers as $resolver) {

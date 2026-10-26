@@ -16,6 +16,7 @@ use App\Modules\Recruitment\Policies\VacancyPolicy;
 use App\Modules\Recruitment\Support\RecruitmentReports;
 use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportRenderers;
+use App\Support\TenantFileAccess;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -37,6 +38,9 @@ class RecruitmentServiceProvider extends ServiceProvider
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // A candidate CV streams only to someone who may view the applicant — security audit finding 10.
+        TenantFileAccess::registerRecordPrefix('applicant-resumes/', fn (string $path) => Applicant::query()->where('resume_path', $path)->first());
 
     }
 

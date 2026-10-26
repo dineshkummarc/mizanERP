@@ -28,7 +28,7 @@ reach it, and the one- or two-line fix.
 | 7 | **Medium** | MPR performance-report PDF has a guessable filename | `time()` in the name, membership-only file access |
 | 8 | **Medium** | Isolation collapses silently if the tenant connection is unset | Row scoping is global-off, trusting the connection alone |
 | 9 | **Low** | Final-settlement figures are not downline-scoped | Policy checks the permission, not the hierarchy |
-| 10 | **Low** | HR document files are company-wide, not owner-scoped | No `TenantFileAccess` resolver for `nic/`, `leave-requests/`, etc. |
+| 10 | **Low** (fixed) | HR and financial document files now match the access of the record they belong to | resolvers for nic, leave-requests, employee-documents, MPR, expense-claims, invoice/journal attachments, contact-documents, applicant-resumes, statement-imports, petty-cash |
 | 11 | **Low** | Authenticated API writes are unthrottled | Only `/api/login` has a rate limiter |
 | 12 | **Low** | A suspended company's users can still sign in | `companies.status` is stored but never read |
 | 13 | **Low** | `is_super_admin` is mass-assignable | In `User::$fillable`; gated only at the form layer |

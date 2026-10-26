@@ -3,9 +3,13 @@
 namespace Tests\Feature;
 
 use App\Modules\Core\Models\Company;
+use App\Modules\Core\Models\CompanyModule;
 use App\Modules\Core\Models\User;
 use App\Modules\Employees\Models\Employee;
+use App\Modules\Expenses\Models\ExpenseClaim;
 use App\Modules\Lifecycle\Models\FinalSettlement;
+use App\Support\TenantStorage;
+use Illuminate\Support\Facades\File;
 use RuntimeException;
 use Tests\AccountingTestCase;
 use Tests\Concerns\InteractsWithTenant;
@@ -92,5 +96,41 @@ class SecurityHardeningTest extends AccountingTestCase
         $response->assertOk();
         $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
         $this->assertStringContainsString("default-src 'none'", (string) $response->headers->get('Content-Security-Policy'));
+    }
+
+    public function test_a_file_streams_only_to_someone_who_may_view_its_record(): void
+    {
+        $admin = $this->makeUser('Administrator', 'claims-admin@test.local');
+        $this->actingAs($admin);
+        $this->setCurrentTenant();
+        CompanyModule::updateOrCreate(['company_id' => $this->tenant->getKey(), 'module' => 'expenses'], ['licensed' => true, 'enabled' => true]);
+        modules()->flush();
+
+        $claimant = $this->makeUser('Employee', 'claimant-file@test.local');
+        $employee = Employee::create(['user_id' => $claimant->id, 'employee_id' => 'EMP-RC', 'gender' => 'Male', 'is_active' => true]);
+
+        $path = 'expense-claims/'.\Illuminate\Support\Str::random(40).'.pdf';
+        $root = TenantStorage::publicRoot($this->tenant);
+        File::ensureDirectoryExists($root.'/expense-claims');
+        File::put($root.'/'.$path, '%PDF-receipt');
+
+        ExpenseClaim::create([
+            'employee_id' => $employee->id,
+            'claimed_on' => '2026-10-01',
+            'description' => 'Fuel',
+            'amount' => 1000,
+            'submitted_by' => $claimant->id,
+            'receipt_path' => $path,
+        ]);
+
+        // An administrator may view any claim (Gate::before), so the receipt streams.
+        $this->actingAs($admin)->get('/files/'.$this->tenant->getKey().'/'.$path)->assertOk();
+
+        // A company member with no claim-view permission is refused the file, because they are refused the
+        // claim — the file now matches the record.
+        $stranger = \App\Modules\Core\Models\User::factory()->create(['status' => 1]);
+        $stranger->companies()->syncWithoutDetaching([$this->tenant->getKey()]);
+        $this->assertFalse($stranger->can('view', ExpenseClaim::first()));
+        $this->actingAs($stranger)->get('/files/'.$this->tenant->getKey().'/'.$path)->assertForbidden();
     }
 }

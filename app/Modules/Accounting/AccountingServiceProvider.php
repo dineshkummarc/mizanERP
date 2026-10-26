@@ -89,6 +89,7 @@ use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportPaneRenderer;
 use App\Support\Reporting\ReportRenderers;
 use App\Support\SettingsSections;
+use App\Support\TenantFileAccess;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -286,6 +287,12 @@ class AccountingServiceProvider extends ServiceProvider
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // Journal attachments, bank-statement imports and petty-cash receipts match the access of the
+        // records they belong to — security audit finding 10.
+        TenantFileAccess::registerRecordPrefix('journal-attachments/', fn (string $path) => JournalEntry::query()->where('attachment_path', $path)->first());
+        TenantFileAccess::registerPermissionPrefix('statement-imports/', 'BankStatementView');
+        TenantFileAccess::registerPermissionPrefix('petty-cash-receipts/', 'PettyCashView');
 
         // The documents Accounting itself books entries for. The register refuses to edit an entry any of
         // these owns, because the entry is the accounting half of that document and the two would

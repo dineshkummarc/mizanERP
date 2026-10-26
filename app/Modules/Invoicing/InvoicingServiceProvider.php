@@ -47,6 +47,7 @@ use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportRenderers;
 use App\Support\ResourceContributions;
 use App\Support\SettingsSections;
+use App\Support\TenantFileAccess;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -309,6 +310,11 @@ class InvoicingServiceProvider extends ServiceProvider
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // Invoice attachments and contact documents stream only to someone who may view the record —
+        // security audit finding 10.
+        TenantFileAccess::registerRecordPrefix('invoice-attachments/', fn (string $path) => Invoice::query()->where('attachment_path', $path)->first());
+        TenantFileAccess::registerRecordPrefix('contact-documents/', fn (string $path) => ContactDocument::query()->where('file_path', $path)->first());
 
         $this->loadRoutesFrom(__DIR__.'/routes/web.php');
     }

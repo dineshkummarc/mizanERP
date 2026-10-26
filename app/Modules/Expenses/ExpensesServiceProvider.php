@@ -10,6 +10,7 @@ use App\Modules\Expenses\Support\ExpenseReports;
 use App\Support\Contracts\ReimbursableClaims;
 use App\Support\Reporting\ReportCatalogue;
 use App\Support\Reporting\ReportRenderers;
+use App\Support\TenantFileAccess;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -40,6 +41,9 @@ class ExpensesServiceProvider extends ServiceProvider
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // A claim receipt streams only to someone who may view the claim — security audit finding 10.
+        TenantFileAccess::registerRecordPrefix('expense-claims/', fn (string $path) => ExpenseClaim::query()->where('receipt_path', $path)->first());
     }
 
     /**
