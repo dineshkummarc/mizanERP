@@ -7,6 +7,8 @@ use App\Modules\Leave\Models\LeaveEntitlement;
 use App\Modules\Leave\Models\LeaveRequest;
 use App\Modules\Leave\Models\LeaveType;
 use App\Modules\Leave\Services\LeaveRequestService;
+use App\Support\TenantStorage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Tests\AccountingTestCase;
@@ -220,10 +222,8 @@ class LeaveApiTest extends AccountingTestCase
         ])->assertStatus(422)->assertJsonValidationErrors(['leave_type_id']);
     }
 
-    public function test_a_type_requiring_a_document_is_refused_over_json(): void
+    public function test_a_type_requiring_a_document_needs_one_attached(): void
     {
-        // ponytail ceiling in LeaveController::apply(): no file upload over this
-        // API yet, so the request is refused rather than quietly filed undocumented.
         $sick = LeaveType::create([
             'code' => 'medical', 'label' => 'Medical Leave', 'days_per_year' => 8,
             'accrual_method' => LeaveType::ACCRUAL_ANNUAL_UPFRONT,
@@ -234,10 +234,24 @@ class LeaveApiTest extends AccountingTestCase
 
         $this->actingAs($this->employee->user);
 
+        // Without one it is refused rather than quietly filed undocumented.
         $this->postJson('/api/my-leave-requests', [
             'leave_type_id' => $sick->id,
             'from_date' => $monday,
             'to_date' => $monday,
-        ])->assertStatus(422)->assertJsonValidationErrors(['leave_type_id']);
+        ])->assertStatus(422)->assertJsonValidationErrors(['document']);
+
+        // With one — multipart, a certificate photographed on the phone — it is stored where the form
+        // stores it, under the company's own directory.
+        $this->post('/api/my-leave-requests', [
+            'leave_type_id' => $sick->id,
+            'from_date' => $monday,
+            'to_date' => $monday,
+            'document' => UploadedFile::fake()->image('certificate.png'),
+        ], ['Accept' => 'application/json'])->assertCreated();
+
+        $request = LeaveRequest::query()->where('leave_type_id', $sick->id)->firstOrFail();
+        $this->assertStringStartsWith('leave-requests/', $request->document_path);
+        $this->assertTrue(TenantStorage::publicDisk($this->tenant)->exists($request->document_path));
     }
 }

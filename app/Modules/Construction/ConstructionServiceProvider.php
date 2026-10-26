@@ -4,12 +4,16 @@ namespace App\Modules\Construction;
 
 use App\Modules\Construction\Models\CostCode;
 use App\Modules\Construction\Models\Document;
+use App\Modules\Construction\Models\DocumentRevision;
 use App\Modules\Construction\Models\Job;
 use App\Modules\Construction\Policies\CostCodePolicy;
 use App\Modules\Construction\Policies\DocumentPolicy;
 use App\Modules\Construction\Policies\JobPolicy;
 use App\Modules\Construction\Support\CostCodeCsvImporter;
+use App\Modules\Core\Models\Company;
+use App\Modules\Core\Models\User;
 use App\Support\CsvImporters;
+use App\Support\TenantFileAccess;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -42,5 +46,18 @@ class ConstructionServiceProvider extends ServiceProvider
         foreach (self::POLICIES as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // A restricted document's file streams only to somebody DocumentPolicy lets view it — the
+        // construction plan's §15.2, enforced rather than advisory. Answered on the company in the URL,
+        // which need not be the current tenant, and null for a path no revision owns.
+        TenantFileAccess::register(function (User $user, Company $company, string $path): ?bool {
+            $lookup = fn () => DocumentRevision::query()->where('file_path', $path)->with('document')->first();
+            // Switched to the URL's company only where there is a separate tenant connection to switch to —
+            // the single-database setup (and its test suite) has every company on one connection already.
+            $switch = ! Company::current()?->is($company) && filled(config('multitenancy.tenant_database_connection_name'));
+            $revision = $switch ? $company->execute($lookup) : $lookup();
+
+            return $revision?->document ? $user->can('view', $revision->document) : null;
+        });
     }
 }

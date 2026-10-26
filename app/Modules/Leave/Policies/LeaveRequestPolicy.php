@@ -4,6 +4,7 @@ namespace App\Modules\Leave\Policies;
 
 use App\Modules\Core\Models\User;
 use App\Modules\Leave\Models\LeaveRequest;
+use App\Modules\Leave\Services\LeaveApprovalChain;
 use App\Modules\Leave\Services\LeaveApprovalRule;
 
 class LeaveRequestPolicy
@@ -56,7 +57,12 @@ class LeaveRequestPolicy
             return false;
         }
 
-        return ! $request->belongsToUser($user) || app(LeaveApprovalRule::class)->allowsSelfApproval();
+        if ($request->belongsToUser($user) && ! app(LeaveApprovalRule::class)->allowsSelfApproval()) {
+            return false;
+        }
+
+        // Past the first approval, the step belongs to whoever holds the role the chain names.
+        return app(LeaveApprovalChain::class)->userMayTakeNextStep($user, $request);
     }
 
     /**

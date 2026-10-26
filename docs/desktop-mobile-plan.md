@@ -95,7 +95,7 @@ are confirmed migrated (the same courtesy `docs/modules-plan.md` §risks demande
 
 ## 3. A-series: API hardening (build first, client-agnostic)
 
-**A1 — Auth lifecycle.** Throttle `POST /api/login` (`RateLimiter`, per-email+IP, the
+**A1 — Auth lifecycle.** **Built 2026-10-26** — `ApiAuthTest`; tokens issued before carry `*` and keep working until they expire thirty days after issue. Throttle `POST /api/login` (`RateLimiter`, per-email+IP, the
 `LeadCaptureController` pattern already in the repo); token expiry via
 `sanctum.expiration` plus a refresh flow; `createToken($deviceName, $abilities)` with a
 required `device_name` in the login payload; `POST /api/logout` (revoke current),

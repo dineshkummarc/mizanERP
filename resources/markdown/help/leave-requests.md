@@ -57,6 +57,15 @@ in Settings, and each self-approval is then recorded as one in the audit trail. 
 waived control that leaves no trace is worse than no control, because the record
 then looks as though two people checked it.
 
+### More than one approval <!-- requires: LeaveRequestApprove -->
+
+A company can ask for a chain: Settings → Leave → **Roles that approve after the
+first approval**. Name HR, then CEO, say, and a request approved by the manager
+waits for somebody holding HR, then somebody holding CEO; the list says which
+role it is waiting for and how many approvals it has. Only the last approval
+records the days and tells the employee. A refusal at any step refuses the
+request. Leave the setting empty and one approval decides, as before.
+
 ## Withdrawing <!-- requires: LeaveRequestView -->
 
 **Withdraw** gives the days back. It works after approval as well as before,

@@ -10,6 +10,8 @@ use App\Modules\Construction\Models\Transmittal;
 use App\Modules\Construction\Models\TransmittalRecipient;
 use App\Modules\Construction\Services\DocumentStateMachine;
 use App\Modules\Core\Models\CompanyModule;
+use App\Support\TenantStorage;
+use Illuminate\Support\Facades\File;
 use InvalidArgumentException;
 use Tests\AccountingTestCase;
 use Tests\Concerns\InteractsWithTenant;
@@ -505,5 +507,43 @@ class ConstructionDocumentRegisterTest extends AccountingTestCase
 
         $this->assertSame(0, Document::query()->where('job_id', $this->job->getKey())->count());
         $this->assertSame(0, DocumentRevision::query()->count());
+    }
+
+    // ---------------------------------------------------------- confidentiality
+
+    /**
+     * A restricted document's file streams only to somebody the policy lets view it — the construction
+     * plan's §15.2, which named this as advisory rather than enforced. Membership stays the floor for every
+     * other file, so a payslip or a receipt streams as it always has.
+     */
+    public function test_a_restricted_documents_file_streams_only_to_somebody_the_policy_lets_view_it(): void
+    {
+        // Written where the file controller reads: the company's own directory, as the uploads land.
+        $root = TenantStorage::publicRoot($this->tenant);
+        foreach (['construction/documents/slab.pdf', 'construction/documents/tender.pdf', 'payslips/january.pdf'] as $file) {
+            File::ensureDirectoryExists(dirname("{$root}/{$file}"));
+            File::put("{$root}/{$file}", '%PDF-'.basename($file));
+        }
+
+        $this->revise($this->document(), 'P01', ['file_path' => 'construction/documents/slab.pdf']);
+        $restricted = $this->document([
+            'information_container_id' => 'TWR-XYZ-ST-01-DR-S-0200',
+            'title' => 'Tender build-up',
+            'confidentiality' => Document::CONFIDENTIALITY_RESTRICTED,
+        ]);
+        $this->revise($restricted, 'P01', ['file_path' => 'construction/documents/tender.pdf']);
+
+        // A site engineer holds ConstructionDocumentView; a manager holds RestrictedView beside Publish.
+        $engineer = $this->makeUser('Employee', 'site@test.local');
+        $manager = $this->makeUser('Manager', 'pm@test.local');
+        $id = $this->tenant->getKey();
+
+        $this->assertFalse($engineer->can('view', $restricted));
+        $this->assertTrue($manager->can('view', $restricted));
+
+        $this->actingAs($engineer)->get("/files/{$id}/construction/documents/slab.pdf")->assertOk();
+        $this->actingAs($engineer)->get("/files/{$id}/construction/documents/tender.pdf")->assertForbidden();
+        $this->actingAs($manager)->get("/files/{$id}/construction/documents/tender.pdf")->assertOk();
+        $this->actingAs($engineer)->get("/files/{$id}/payslips/january.pdf")->assertOk();
     }
 }

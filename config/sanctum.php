@@ -50,7 +50,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Thirty days by default — docs/desktop-mobile-plan.md A1. A client refreshes (POST /api/refresh) before
+    // then; a token on a lost phone dies on its own. 0 means never, which is what this shipped as.
+    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION', 43200),
 
     /*
     |--------------------------------------------------------------------------

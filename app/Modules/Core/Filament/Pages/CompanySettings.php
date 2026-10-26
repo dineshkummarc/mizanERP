@@ -14,6 +14,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -24,6 +25,8 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use UnitEnum;
 
 /**
@@ -104,6 +107,7 @@ class CompanySettings extends Page
             'leave_carry_forward_expiry_months' => (int) setting('leave.carry_forward_expiry_months'),
             'leave_prorate_first_year' => (bool) setting('leave.prorate_first_year'),
             'leave_require_second_approver' => (bool) setting('leave.require_second_approver'),
+            'leave_approval_chain' => array_values((array) setting('leave.approval_chain', [])),
             'leave_min_notice_enforced' => (bool) setting('leave.min_notice_enforced'),
             'leave_sandwich_rule' => setting('leave.sandwich_rule'),
             'payroll_prorate_on_attendance' => (bool) setting('payroll.prorate_on_attendance'),
@@ -403,6 +407,16 @@ class CompanySettings extends Page
                 Toggle::make('leave_require_second_approver')
                     ->label('Require somebody else to approve leave')
                     ->helperText('On, nobody may approve their own leave — a manager\'s own request routes to their manager. Turn it OFF only if there is nobody above to approve: the person at the top of the reporting tree otherwise cannot have leave approved at all. Self-approvals are recorded as such in the audit trail. It starts at whatever this installation was set up with (LEAVE_REQUIRE_SECOND_APPROVER in .env); saving here is this company answering for itself, and that answer stands whatever the installation default later becomes.'),
+
+                TagsInput::make('leave_approval_chain')
+                    ->label('Roles that approve after the first approval, in order')
+                    ->placeholder('Add a role')
+                    ->suggestions(fn (): array => Role::query()
+                        ->where('company_id', app(PermissionRegistrar::class)->getPermissionsTeamId())
+                        ->orderBy('name')
+                        ->pluck('name')
+                        ->all())
+                    ->helperText('Empty, one approval decides a request, as it always has. Name roles here — HR, then CEO, say — and after the first approval the request waits for somebody holding each role in turn; only the last approval records the days and tells the employee. The "require somebody else" rule above applies at every step. A name that is not a role in this company is dropped when you save.'),
 
                 Toggle::make('leave_min_notice_enforced')
                     ->label('Enforce the notice each leave type asks for')

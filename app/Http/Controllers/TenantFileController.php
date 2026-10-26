@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Modules\Core\Models\Company;
+use App\Support\TenantFileAccess;
 use App\Support\TenantStorage;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -29,6 +30,10 @@ class TenantFileController extends Controller
         );
 
         abort_unless(TenantStorage::isSafePath($path), 404);
+
+        // Membership is the floor. A module that owns the document behind this path may say more —
+        // a restricted drawing streams only to somebody its policy lets view it. See TenantFileAccess.
+        abort_unless(TenantFileAccess::allows($request->user(), $company, $path), 403, 'You do not have access to this file.');
 
         // A disk built for this company only — the request cannot address
         // anything outside its own directory.

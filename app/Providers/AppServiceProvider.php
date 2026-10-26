@@ -39,14 +39,18 @@ use Filament\Support\Facades\FilamentView;
 use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobQueueing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Spatie\Health\Checks\Checks\BackupsCheck;
 use Spatie\Health\Checks\Checks\CacheCheck;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
@@ -180,6 +184,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Five tries a minute per email and address, then 429 — docs/desktop-mobile-plan.md A1. Keyed on
+        // both so a guess at one account from many addresses and at many accounts from one are both slowed.
+        RateLimiter::for('login', fn (Request $request): Limit => Limit::perMinute(5)
+            ->by(Str::lower((string) $request->input('email')).'|'.$request->ip()));
+
         /*
          * Lazy loading is an error everywhere except production.
          *

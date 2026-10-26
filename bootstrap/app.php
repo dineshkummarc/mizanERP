@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
          */
         $middleware->trustProxies(at: ['127.0.0.1', '::1']);
 
+        // A token must carry the `api` ability — docs/desktop-mobile-plan.md A1. On the group, so a route
+        // file added later cannot forget it.
+        $middleware->api(append: [App\Http\Middleware\RequireTokenAbility::class]);
+
         // Licensing is enforced per route, not globally: most routes belong to a
         // module, and the ones that do not (login, the panel shell, tenant file
         // downloads) must stay reachable whatever a company has bought.

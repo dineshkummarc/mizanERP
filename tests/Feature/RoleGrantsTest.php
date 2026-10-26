@@ -385,9 +385,11 @@ class RoleGrantsTest extends AccountingTestCase
         'Employee' => 69,
         'Accountant' => 153,
         // 196 since 2026-09-21: InvoiceOverrideCreditLimit — docs/erpnext-gap-plan.md §4 item 5.
-        'Manager' => 196,
-        // 217 since 2026-09-21: CEO composes on Manager, so InvoiceOverrideCreditLimit reaches here too.
-        'CEO' => 217,
+        // 197 since 2026-10-26: ConstructionDocumentRestrictedView, beside Publish — construction plan §15.2.
+        'Manager' => 197,
+        // 217 since 2026-09-21: CEO composes on Manager, so InvoiceOverrideCreditLimit reaches here too;
+        // 218 since 2026-10-26 for the same reason.
+        'CEO' => 218,
     ];
 
     protected function setUp(): void

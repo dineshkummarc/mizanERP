@@ -78,7 +78,9 @@ abstract class AccountingTestCase extends TestCase
 
         $user->companies()->syncWithoutDetaching([$this->apiCompany->getKey()]);
 
-        Sanctum::actingAs($user);
+        // With the one ability a real token carries: RequireTokenAbility checks it on every API request, and
+        // Sanctum's test double answers `can()` with false for anything not listed.
+        Sanctum::actingAs($user, ['api']);
 
         return $user;
     }

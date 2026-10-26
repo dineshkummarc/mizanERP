@@ -104,6 +104,7 @@
         "App\\Models\\LabourRecord": "App\\Modules\\ConstructionCosting\\Models\\LabourRecord",
         "App\\Models\\Lead": "App\\Modules\\Crm\\Models\\Lead",
         "App\\Models\\LeadSource": "App\\Modules\\Crm\\Models\\LeadSource",
+        "App\\Models\\LeaveApproval": "App\\Modules\\Leave\\Models\\LeaveApproval",
         "App\\Models\\LeaveAdjustment": "App\\Modules\\Leave\\Models\\LeaveAdjustment",
         "App\\Models\\LeaveDay": "App\\Modules\\Leave\\Models\\LeaveDay",
         "App\\Models\\LeaveEntitlement": "App\\Modules\\Leave\\Models\\LeaveEntitlement",

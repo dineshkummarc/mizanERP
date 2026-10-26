@@ -22,9 +22,17 @@ class DocumentPolicy
         return $user->can('ConstructionDocumentView');
     }
 
+    /**
+     * A restricted document needs its own permission on top of the ordinary one. Enforced, not advisory:
+     * the file behind it streams through TenantFileController only to somebody this answers yes for.
+     */
     public function view(User $user, Document $document): bool
     {
-        return $user->can('ConstructionDocumentView');
+        if (! $user->can('ConstructionDocumentView')) {
+            return false;
+        }
+
+        return ! $document->isRestricted() || $user->can('ConstructionDocumentRestrictedView');
     }
 
     public function create(User $user): bool

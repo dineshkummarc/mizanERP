@@ -66,7 +66,7 @@ class LeaveRequestsTable
                     })
                     // A refusal without its reason is the complaint the approval step
                     // exists to answer, so the reason travels with the badge.
-                    ->description(fn (LeaveRequest $record): ?string => $record->refusal_reason)
+                    ->description(fn (LeaveRequest $record): ?string => $record->refusal_reason ?? $record->awaitingLabel())
                     ->sortable(),
 
                 TextColumn::make('reason')->wrap()->limit(60)->toggleable(),

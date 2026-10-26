@@ -29,6 +29,7 @@ class LeaveRequestService
         private readonly LeaveDayGenerator $generator,
         private readonly LeaveApprovalRule $rule,
         private readonly LeaveBalance $balance,
+        private readonly LeaveApprovalChain $chain,
     ) {}
 
     /**
@@ -95,7 +96,47 @@ class LeaveRequestService
             );
         }
 
-        TenantTransaction::run(function () use ($request, $approver): void {
+        // Multi-step: the roles the company named come after the first approval, in order — docs/hrms-plan.md
+        // §11, LeaveApprovalChain. A step that is not the last records itself and tells the next role; only
+        // the last one below generates the days and tells the employee.
+        $step = $this->chain->nextStep($request);
+        $role = $this->chain->roleForStep($step);
+
+        if ($role !== null && ! $approver->hasRole($role)) {
+            throw new InvalidArgumentException("This request is waiting for somebody holding the {$role} role to approve it.");
+        }
+
+        if (! $this->chain->isFinal($step)) {
+            $request->approvals()->create([
+                'step' => $step,
+                'role' => $role,
+                'approved_by' => $approver->getKey(),
+                'approved_at' => now(),
+            ]);
+
+            activity('LeaveRequest')
+                ->performedOn($request)
+                ->causedBy($approver)
+                ->event('approval_step')
+                ->withProperties(['step' => $step, 'role' => $role, 'awaiting' => $this->chain->roleForStep($step + 1)])
+                ->log("Leave request approval step {$step} given; waiting for ".$this->chain->roleForStep($step + 1));
+
+            $this->notifyRole($request, $this->chain->roleForStep($step + 1));
+
+            return $request->refresh();
+        }
+
+        TenantTransaction::run(function () use ($request, $approver, $step, $role): void {
+            // The last step of a chain is recorded with the rest, so the table reads as the whole story.
+            if ($step > 1) {
+                $request->approvals()->create([
+                    'step' => $step,
+                    'role' => $role,
+                    'approved_by' => $approver->getKey(),
+                    'approved_at' => now(),
+                ]);
+            }
+
             $request->update([
                 'status' => LeaveRequest::STATUS_APPROVED,
                 'decided_by' => $approver->getKey(),
@@ -276,6 +317,21 @@ class LeaveRequestService
             ->get();
 
         Notification::send($approvers, new LeaveRequestSubmitted($request));
+    }
+
+    /** The holders of the role the chain now waits for — never the person who filed it. */
+    private function notifyRole(LeaveRequest $request, ?string $role): void
+    {
+        if ($role === null) {
+            return;
+        }
+
+        $holders = User::role($role)
+            ->where('id', '!=', $request->submitted_by)
+            ->where('status', 1)
+            ->get();
+
+        Notification::send($holders, new LeaveRequestSubmitted($request, awaiting: $role));
     }
 
     private function notifySubmitter(LeaveRequest $request): void

@@ -26,6 +26,7 @@ return [
     'models' => [
         'App\\Models\\LeaveType' => \App\Modules\Leave\Models\LeaveType::class,
         'App\\Models\\LeaveEntitlement' => \App\Modules\Leave\Models\LeaveEntitlement::class,
+        'App\\Models\\LeaveApproval' => \App\Modules\Leave\Models\LeaveApproval::class,
         'App\\Models\\LeaveAdjustment' => \App\Modules\Leave\Models\LeaveAdjustment::class,
         'App\\Models\\LeaveRequest' => \App\Modules\Leave\Models\LeaveRequest::class,
         'App\\Models\\LeaveDay' => \App\Modules\Leave\Models\LeaveDay::class,

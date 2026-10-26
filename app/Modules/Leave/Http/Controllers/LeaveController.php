@@ -8,7 +8,9 @@ use App\Modules\Leave\Models\LeaveRequest;
 use App\Modules\Leave\Models\LeaveType;
 use App\Modules\Leave\Services\LeaveBalance;
 use App\Modules\Leave\Services\LeaveRequestService;
+use App\Support\TenantStorage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -113,6 +115,8 @@ class LeaveController extends Controller
                 'in:'.LeaveRequest::HALF_FIRST.','.LeaveRequest::HALF_SECOND,
             ],
             'reason' => ['nullable', 'string', 'max:2000'],
+            // Multipart, the same file the form takes — a medical certificate photographed on the phone.
+            'document' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:8192'],
         ]);
 
         // Checked here rather than with an `exists` rule: exists() reads the
@@ -125,14 +129,21 @@ class LeaveController extends Controller
             ]);
         }
 
-        // ponytail: no file upload over this JSON API yet — a type that requires a
-        // document is refused rather than quietly filed without one. Upgrade path:
-        // accept multipart with a `document` file and store it the way the form does.
-        if ($type->requires_document) {
+        // A type that requires a document is refused without one rather than quietly filed; with one, it is
+        // stored where the form stores it (disk `public`, tenant-rooted by the company resolved above).
+        if ($type->requires_document && ! $request->hasFile('document')) {
             throw ValidationException::withMessages([
-                'leave_type_id' => "{$type->label} needs a supporting document — please file it through the portal.",
+                'document' => "{$type->label} needs a supporting document — attach one as `document`.",
             ]);
         }
+
+        // On the company's own directory, built from the company the request resolved rather than from the
+        // `public` disk: the single-database setup activates a company without re-pointing that disk, and
+        // the file controller reads from the company's directory either way.
+        $documentPath = $request->hasFile('document')
+            ? Storage::build(['driver' => 'local', 'root' => TenantStorage::publicRoot($request->attributes->get('company'))])
+                ->putFile('leave-requests', $request->file('document'))
+            : null;
 
         $leaveRequest = new LeaveRequest([
             'employee_id' => $employee->id,
@@ -142,6 +153,7 @@ class LeaveController extends Controller
             'is_half_day' => (bool) ($data['is_half_day'] ?? false),
             'half_day_period' => $data['half_day_period'] ?? null,
             'reason' => $data['reason'] ?? null,
+            'document_path' => $documentPath,
         ]);
 
         try {

@@ -1167,9 +1167,10 @@ Beyond the eight `Module*` tests every module must satisfy:
   encode Sindh's rules as "Pakistan".
 - **Approver chains beyond one level.** This plan approves at `manager_id` and
   falls back to the second-approver setting. Multi-step approval (manager → HR →
-  CEO) is a real request and is not designed here; adding it later means a
-  `leave_approvals` table, not a column, so do not put `approved_by` to work as
-  if it were the only approval.
+  CEO) was a real request and not designed here; **built 2026-10-26** as
+  `leave.approval_chain` (a list of roles after the first approval) with the
+  steps in a `leave_approvals` table, not a column — `decided_by` stays the one
+  decision. `LeaveApprovalChain` is three questions, not an engine; `LeaveApprovalChainTest`.
 
   **Do not build a generic approval engine for it.** The instinct is to
   consolidate, since `EmployeeChangeRequest`, `expenses`, `advances` and
@@ -1192,5 +1193,5 @@ Beyond the eight `Module*` tests every module must satisfy:
   way: the caller's own employee record, nobody else's. The balance carries every
   term of the arithmetic, not just the total; filing goes through
   `LeaveRequestService::submit()`, so the API cannot file what the form would
-  refuse (`LeaveApiTest`). One stated gap: a type that requires a document is
+  refuse (`LeaveApiTest`). The one stated gap closed 2026-10-26 — `POST /api/my-leave-requests` takes a multipart `document`, stored where the form stores it. Before that: a type that requires a document is
   refused over JSON until the API accepts an upload.

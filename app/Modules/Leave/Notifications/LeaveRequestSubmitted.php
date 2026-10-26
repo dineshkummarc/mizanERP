@@ -22,7 +22,8 @@ class LeaveRequestSubmitted extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public LeaveRequest $request) {}
+    /**   string|null  $awaiting  the chain role this notice is for, when a step has already been given */
+    public function __construct(public LeaveRequest $request, public ?string $awaiting = null) {}
 
     public function via(object $notifiable): array
     {
@@ -47,6 +48,10 @@ class LeaveRequestSubmitted extends Notification implements ShouldQueue
         // than an accident.
         if ($this->request->document_path) {
             $mail->line('A supporting document was attached — open the request to see it.');
+        }
+
+        if ($this->awaiting) {
+            $mail->line("It has its earlier approval and now waits for {$this->awaiting}.");
         }
 
         return $mail->line('Approve it, or refuse it with a reason, from Leave Requests.');

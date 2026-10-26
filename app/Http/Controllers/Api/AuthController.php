@@ -3,34 +3,125 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\AuthenticatedUserResource;
+use App\Modules\Core\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 
+/**
+ * The API's sign-in and token lifecycle — docs/desktop-mobile-plan.md, A1.
+ *
+ * What it replaces: a login with no throttle, tokens that never expired, carried every ability and were
+ * all named "API Token", no way to sign out, and the whole user model in the response. A phone lost in a
+ * rickshaw was a permanent credential. Now the login is rate-limited per email and address
+ * (AppServiceProvider's `login` limiter), each token is named for its device, expires after
+ * `sanctum.expiration` minutes and carries one ability that RequireTokenAbility checks on every API
+ * request, a device can be signed out or revoked, and the response says only what a client needs.
+ */
 class AuthController extends Controller
 {
-    public function login(Request $request)
-    {
+    /** What a token issued here may do. Checked by RequireTokenAbility on every API request. */
+    public const ABILITY = 'api';
 
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+    public function login(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+            'device_name' => ['required', 'string', 'max:100'],
         ]);
 
-        if (! Auth::attempt($request->only('email', 'password'))) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid email or password',
-            ], 401);
+        // Validated, not logged in: the API has no session, and attempt() would sign the web guard in — which
+        // in a test client outlives the request and then answers for every bearer token after it.
+        $guard = Auth::guard('web');
+
+        if (! $guard->validate(['email' => $data['email'], 'password' => $data['password']])) {
+            return response()->json(['success' => false, 'message' => 'Invalid email or password'], 401);
         }
 
-        $user = Auth::user();
-        $token = $user->createToken('API Token')->plainTextToken;
+        /** @var User $user */
+        $user = $guard->getLastAttempted();
+
+        if ((int) $user->status !== 1) {
+            return response()->json(['success' => false, 'message' => 'This account is disabled.'], 403);
+        }
+
+        return $this->issued($user, $data['device_name'], 'Login successful');
+    }
+
+    /** Sign this device out: the token that made the request stops working. */
+    public function logout(Request $request): JsonResponse
+    {
+        $token = $request->user()->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+
+        return response()->json(['success' => true, 'message' => 'Signed out; this token no longer works.']);
+    }
+
+    /** A fresh token for the same device, the old one revoked — how a client outlives `sanctum.expiration`. */
+    public function refresh(Request $request): JsonResponse
+    {
+        $current = $request->user()->currentAccessToken();
+        $deviceName = $current instanceof PersonalAccessToken ? $current->name : 'API Token';
+
+        if ($current instanceof PersonalAccessToken) {
+            $current->delete();
+        }
+
+        return $this->issued($request->user(), $deviceName, 'Token refreshed');
+    }
+
+    /** Every device signed in to this account. */
+    public function tokens(Request $request): JsonResponse
+    {
+        $current = $request->user()->currentAccessToken();
+        $currentId = $current instanceof PersonalAccessToken ? $current->getKey() : null;
+
+        $devices = $request->user()->tokens()
+            ->orderByDesc('last_used_at')
+            ->get()
+            ->map(fn (PersonalAccessToken $token): array => [
+                'id' => $token->getKey(),
+                'device_name' => $token->name,
+                'current' => $token->getKey() === $currentId,
+                'created_at' => $token->created_at?->toIso8601String(),
+                'last_used_at' => $token->last_used_at?->toIso8601String(),
+                'expires_at' => $token->expires_at?->toIso8601String(),
+            ])
+            ->values();
+
+        return response()->json(['success' => true, 'count' => $devices->count(), 'data' => $devices]);
+    }
+
+    /** Sign out one device — the lost phone — from another. */
+    public function revoke(Request $request, int $token): JsonResponse
+    {
+        $deleted = $request->user()->tokens()->whereKey($token)->delete();
+
+        abort_unless($deleted, 404, 'No such device.');
+
+        return response()->json(['success' => true, 'message' => 'That device is signed out.']);
+    }
+
+    private function issued(User $user, string $deviceName, string $message): JsonResponse
+    {
+        $minutes = (int) config('sanctum.expiration');
+        $expiresAt = $minutes > 0 ? now()->addMinutes($minutes) : null;
+
+        $token = $user->createToken($deviceName, [self::ABILITY], $expiresAt);
 
         return response()->json([
             'success' => true,
-            'message' => 'Login successful',
-            'token' => $token,
-            'user' => $user,
-        ], 200);
+            'message' => $message,
+            'token' => $token->plainTextToken,
+            'token_type' => 'Bearer',
+            'expires_at' => $expiresAt?->toIso8601String(),
+            'user' => new AuthenticatedUserResource($user),
+        ]);
     }
 }

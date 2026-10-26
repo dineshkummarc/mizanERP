@@ -1497,8 +1497,10 @@ why. Do not invent a second storage path.
 
 Two deltas worth writing down rather than discovering. `TenantFileController` checks **company membership
 and nothing else** — there is no per-document policy hook — so a `restricted` confidentiality on a tender
-build-up or an incident investigation naming an injured person is **advisory, not enforced**: any user of
-the company holding the URL can stream it. Either say so on the field's helper text, or scope a Core
+build-up or an incident investigation naming an injured person was **advisory, not enforced**: any user of
+the company holding the URL could stream it. **Enforced 2026-10-26**: `App\Support\TenantFileAccess` is the
+Core policy hook, Construction answers through `DocumentPolicy::view`, and a restricted document needs
+`ConstructionDocumentRestrictedView` (granted beside Publish) on top of View. Either say so on the field's helper text, or scope a Core
 change to add a policy resolver — as a Core change, deliberately, not smuggled in behind a construction
 migration. And the Lifecycle precedent's 8 MB upload cap is far too small for a drawing set: make it
 configuration, defaulting to something like 50 MB, and state plainly that the browser upload path is not

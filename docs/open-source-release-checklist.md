@@ -137,6 +137,10 @@ rotation is unchanged and still required**. Local machines with old clones must
 
 ## 2. Files GitHub and contributors expect
 
+**All present, checked 2026-10-26.** What still stands before publishing is §1.7 (rotate every credential
+that was ever in the repository — nothing here can verify that) and, from §1.6, the GitHub Support
+request that clears the pre-rewrite commits GitHub still serves; then the `v0.1.0` tag in §3.
+
 | File | Notes |
 |---|---|
 | `LICENSE` | **A repo with no licence is not open source** — default copyright means nobody may use it. MIT is the Laravel-ecosystem norm and the README already claims it; add the file or change the README. |

@@ -6,6 +6,7 @@ use App\Models\Concerns\StoresPlainDates;
 use App\Models\TenantModel as Model;
 use App\Modules\Core\Models\User;
 use App\Modules\Employees\Models\Employee;
+use App\Modules\Leave\Services\LeaveApprovalChain;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -95,6 +96,18 @@ class LeaveRequest extends Model
     public function decider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by');
+    }
+
+    /** The steps taken so far of a multi-step approval — LeaveApprovalChain. Empty in a single-step company. */
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(LeaveApproval::class)->orderBy('step');
+    }
+
+    /** "waiting for HR" while a chain is part-way through; null otherwise. */
+    public function awaitingLabel(): ?string
+    {
+        return app(LeaveApprovalChain::class)->awaitingLabel($this);
     }
 
     public function scopePending(Builder $query): Builder

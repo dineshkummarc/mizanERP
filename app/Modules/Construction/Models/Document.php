@@ -51,6 +51,15 @@ class Document extends Model
      */
     public const TYPE_MODEL = 'model';
 
+    /**
+     * Who may read it. `normal` is anybody who may read documents; `restricted` — a tender build-up, an
+     * incident investigation naming an injured person — needs ConstructionDocumentRestrictedView as well,
+     * and the file streams to nobody else (DocumentPolicy::view, enforced through TenantFileAccess).
+     */
+    public const CONFIDENTIALITY_NORMAL = 'normal';
+
+    public const CONFIDENTIALITY_RESTRICTED = 'restricted';
+
     protected $table = 'construction_documents';
 
     protected $fillable = [
@@ -72,6 +81,11 @@ class Document extends Model
         'is_contractual' => false,
         'confidentiality' => 'normal',
     ];
+
+    public function isRestricted(): bool
+    {
+        return $this->confidentiality === self::CONFIDENTIALITY_RESTRICTED;
+    }
 
     public function job(): BelongsTo
     {

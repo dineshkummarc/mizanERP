@@ -107,6 +107,8 @@ return [
         ['name' => 'ConstructionDocumentUpdate', 'group' => 'ConstructionDocument'],
         ['name' => 'ConstructionDocumentDelete', 'group' => 'ConstructionDocument'],
         ['name' => 'ConstructionDocumentPublish', 'group' => 'ConstructionDocument'],
+        // Restricted documents — a tender build-up, an incident investigation — need this on top of View.
+        ['name' => 'ConstructionDocumentRestrictedView', 'group' => 'ConstructionDocument'],
     ],
 
     /**
@@ -147,6 +149,7 @@ return [
         // people who upload drawings — the same segregation the journal-entry powers already keep.
         'Manager' => [
             'ConstructionDocumentPublish',
+            'ConstructionDocumentRestrictedView',
         ],
         'CEO' => [
             'ConstructionCostCodeDelete',
