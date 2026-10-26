@@ -25,7 +25,12 @@ class ApiRoutes
     public static function group(array $middleware, Closure $routes): void
     {
         foreach (self::PREFIXES as $prefix) {
-            Route::prefix($prefix)->middleware($middleware)->group($routes);
+            // The versioned surface namespaces its route names (v1.accounts.index), because a named route
+            // registered under both prefixes would collide and break route:cache.
+            Route::prefix($prefix)
+                ->name($prefix === 'api' ? '' : 'v1.')
+                ->middleware($middleware)
+                ->group($routes);
         }
     }
 }
